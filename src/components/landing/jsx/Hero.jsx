@@ -45,6 +45,7 @@ export default function Hero(){
           
         </div>
       </div>
+      <div className='Hero-background'>
       <Hyperspeed
         effectOptions={{
           onSpeedUp: () => { },
@@ -84,6 +85,7 @@ export default function Hero(){
           }
         }}
       />
+      </div>
     </div>
   )
 }

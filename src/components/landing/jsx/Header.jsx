@@ -18,10 +18,10 @@ export default function Header(){
       bgColor: "#1F1230",
       textColor: "#fff",
       links: [
-        { label: "Web Development", ariaLabel: "Our Web Development Service" },
-        { label: "Mobile Apps", ariaLabel: "Our Mobile Apps Service" },
-        { label: "UI/UX Design", ariaLabel: "Our UI/UX Design Service" },
-        { label: "Digital Marketing", ariaLabel: "Our Digital Marketing Service" }
+        { label: "Web Development", ariaLabel: "Our Web Development Service", href: "#services" },
+        { label: "Mobile Apps", ariaLabel: "Our Mobile Apps Service", href: "#services" },
+        { label: "UI/UX Design", ariaLabel: "Our UI/UX Design Service", href: "#services" },
+        { label: "Digital Marketing", ariaLabel: "Our Digital Marketing Service", href: "#services" }
       ]
     },
     {
@@ -45,7 +45,7 @@ export default function Header(){
         menuColor="#fff"
         buttonBgColor="#fff"
         buttonTextColor="#000"
-        ease="power3.out"
+        ease="back.out(1.7)"
       />
     </div>
   )

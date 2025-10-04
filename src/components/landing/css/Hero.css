@@ -1,10 +1,8 @@
 .Hero{
   height: 100vh;
   width: 100vw;
-  overflow: hidden;
-  position: relative;
-  top: 0;
-  left: 0;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
   background: #000;
   display: flex;
@@ -35,4 +33,13 @@
 }
 .Hero-subtitle{
   z-index: 100;
+}
+.Hero-background{
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 1;
 }

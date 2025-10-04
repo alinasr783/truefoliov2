@@ -181,6 +181,8 @@ const CardNav = ({
                     key={`${lnk.label}-${i}`}
                     className="nav-card-link"
                     href={lnk.href}
+                    
+                    onClick={toggleMenu}
                     aria-label={lnk.ariaLabel}>
                     <GoArrowUpRight className="nav-card-link-icon" aria-hidden="true" />
                     {lnk.label}

@@ -157,7 +157,7 @@ const CardNav = ({
             <div className="hamburger-line" />
           </div>
 
-          <div className="logo-container">
+          <div className="logo-container" onClick={()=> navigate("/")}>
             <img src={logo} alt={logoAlt} className="logo" />
           </div>
 

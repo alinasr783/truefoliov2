@@ -182,7 +182,7 @@ const CardNav = ({
                   <a
                     key={`${lnk.label}-${i}`}
                     className="nav-card-link"
-                    href={lnk.href}
+
                     
                     
                     onClick={()=>{

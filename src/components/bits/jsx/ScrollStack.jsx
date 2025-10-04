@@ -1,9 +1,16 @@
 import { useLayoutEffect, useRef, useCallback } from 'react';
 import Lenis from 'lenis';
-import '../css/ScrollStack.css';
 
 export const ScrollStackItem = ({ children, itemClassName = '' }) => (
-  <div className={`scroll-stack-card ${itemClassName}`.trim()}>{children}</div>
+  <div
+    className={`scroll-stack-card relative w-full h-80 my-8 p-12 rounded-[40px] shadow-[0_0_30px_rgba(0,0,0,0.1)] box-border origin-top will-change-transform ${itemClassName}`.trim()}
+    style={{
+      backfaceVisibility: 'hidden',
+      transformStyle: 'preserve-3d'
+    }}
+  >
+    {children}
+  </div>
 );
 
 const ScrollStack = ({
@@ -18,7 +25,7 @@ const ScrollStack = ({
   scaleDuration = 0.5,
   rotationAmount = 0,
   blurAmount = 0,
-  useWindowScroll = true,
+  useWindowScroll = false,
   onStackComplete
 }) => {
   const scrollerRef = useRef(null);
@@ -59,14 +66,17 @@ const ScrollStack = ({
     }
   }, [useWindowScroll]);
 
-  const getElementOffset = useCallback(element => {
-    if (useWindowScroll) {
-      const rect = element.getBoundingClientRect();
-      return rect.top + window.scrollY;
-    } else {
-      return element.offsetTop;
-    }
-  }, [useWindowScroll]);
+  const getElementOffset = useCallback(
+    element => {
+      if (useWindowScroll) {
+        const rect = element.getBoundingClientRect();
+        return rect.top + window.scrollY;
+      } else {
+        return element.offsetTop;
+      }
+    },
+    [useWindowScroll]
+  );
 
   const updateCardTransforms = useCallback(() => {
     if (!cardsRef.current.length || isUpdatingRef.current) return;
@@ -216,14 +226,10 @@ const ScrollStack = ({
         smoothWheel: true,
         touchMultiplier: 2,
         infinite: false,
-        gestureOrientationHandler: true,
-        normalizeWheel: true,
         wheelMultiplier: 1,
-        touchInertiaMultiplier: 35,
         lerp: 0.1,
         syncTouch: true,
-        syncTouchLerp: 0.075,
-        touchInertia: 0.6
+        syncTouchLerp: 0.075
       });
 
       lenis.on('scroll', handleScroll);
@@ -243,9 +249,11 @@ const ScrollStack = ({
     const scroller = scrollerRef.current;
     if (!scroller) return;
 
-    const cards = Array.from(useWindowScroll
-      ? document.querySelectorAll('.scroll-stack-card')
-      : scroller.querySelectorAll('.scroll-stack-card'));
+    const cards = Array.from(
+      useWindowScroll
+        ? document.querySelectorAll('.scroll-stack-card')
+        : scroller.querySelectorAll('.scroll-stack-card')
+    );
 
     cardsRef.current = cards;
     const transformsCache = lastTransformsRef.current;
@@ -295,12 +303,35 @@ const ScrollStack = ({
     updateCardTransforms
   ]);
 
+  // Container styles based on scroll mode
+  const containerStyles = useWindowScroll
+    ? {
+        // Global scroll mode - no overflow constraints
+        overscrollBehavior: 'contain',
+        WebkitOverflowScrolling: 'touch',
+        WebkitTransform: 'translateZ(0)',
+        transform: 'translateZ(0)'
+      }
+    : {
+        // Container scroll mode - original behavior
+        overscrollBehavior: 'contain',
+        WebkitOverflowScrolling: 'touch',
+        scrollBehavior: 'smooth',
+        WebkitTransform: 'translateZ(0)',
+        transform: 'translateZ(0)',
+        willChange: 'scroll-position'
+      };
+
+  const containerClassName = useWindowScroll
+    ? `relative w-full ${className}`.trim()
+    : `relative w-full h-full overflow-y-auto overflow-x-visible ${className}`.trim();
+
   return (
-    <div className={`scroll-stack-scroller ${className}`.trim()} ref={scrollerRef}>
-      <div className="scroll-stack-inner">
+    <div className={containerClassName} ref={scrollerRef} style={containerStyles}>
+      <div className="scroll-stack-inner pt-[20vh] px-20 pb-[50rem] min-h-screen">
         {children}
         {/* Spacer so the last pin can release cleanly */}
-        <div className="scroll-stack-end" />
+        <div className="scroll-stack-end w-full h-px" />
       </div>
     </div>
   );

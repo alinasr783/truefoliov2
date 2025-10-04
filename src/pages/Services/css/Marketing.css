@@ -1,0 +1,117 @@
+.marketing-page {
+  min-height: 100vh;
+
+  color: #ffffff;
+}
+
+.service-hero {
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  padding: 120px 20px 80px;
+  text-align: center;
+}
+
+.service-hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.service-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.service-subtitle {
+  font-size: 1.3rem;
+  color: #b0b0b0;
+  margin-bottom: 3rem;
+  line-height: 1.6;
+}
+
+.cta-button {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+  border: none;
+  padding: 15px 40px;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(245, 87, 108, 0.3);
+}
+
+.service-details {
+  padding: 80px 20px;
+  background: #0a0a0a;
+}
+
+.details-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.details-content h2 {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 3rem;
+  color: #ffffff;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.service-card {
+  background: #1a1a1a;
+  padding: 2.5rem;
+  border-radius: 12px;
+  border: 1px solid #333;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.service-card:hover {
+  border-color: #f5576c;
+  transform: translateY(-5px);
+}
+
+.service-icon {
+  margin-bottom: 1.5rem;
+  color: #f5576c;
+}
+
+.service-card h3 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  color: #ffffff;
+}
+
+.service-card p {
+  color: #b0b0b0;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .service-title {
+    font-size: 2.5rem;
+  }
+
+  .service-subtitle {
+    font-size: 1.1rem;
+  }
+
+  .services-grid {
+    grid-template-columns: 1fr;
+  }
+}

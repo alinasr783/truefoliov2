@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import '../css/Services.css'
 import TiltedCard from '../../bits/jsx/TiltedCard';
 import FuzzyText from '../../bits/jsx/FuzzyText';
@@ -14,6 +15,7 @@ const services = [
       </svg>
     ),
     image: 'https://i.ibb.co/vbfYjMd/istockphoto-1456339578-612x612.jpg',
+    link: '/services/webdesign',
   },
   {
     title: 'Mobile App',
@@ -26,7 +28,8 @@ const services = [
         <rect x="3" y="16" width="7" height="5" />
       </svg>
     ),
-    image: 'https://i.ibb.co/hk1JDtw/istockphoto-1597039515-612x612.jpg'
+    image: 'https://i.ibb.co/hk1JDtw/istockphoto-1597039515-612x612.jpg',
+    link: '/services/mobileapp',
   },
   {
     title: 'Marketing',
@@ -37,29 +40,8 @@ const services = [
         <circle cx="12" cy="7" r="4" />
       </svg>
     ),
-    image: 'https://i.ibb.co/Q7GFgF3M/istockphoto-1492180527-612x612.jpg'
-  },
-  {
-    title: 'Hosting',
-    description: 'De Advised That Image.',
-    icon: (
-      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
-        <path d="M16 3h-8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z" />
-      </svg>
-    ),
-    image: 'https://i.ibb.co/Y7xD4dLt/istockphoto-1324448597-612x612.jpg'
-  },
-  {
-    title: 'CRM',
-    description: 'De Advised That Image.',
-    icon: (
-      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 12h18" />
-        <path d="M12 3v18" />
-      </svg>
-    ),
-    image: 'https://i.ibb.co/7N2QhJ97/istockphoto-1471444483-612x612.jpg'
+    image: 'https://i.ibb.co/Q7GFgF3M/istockphoto-1492180527-612x612.jpg',
+    link: '/services/marketing',
   },
   {
     title: 'SEO',
@@ -71,11 +53,13 @@ const services = [
         <path d="M8 21V3" />
       </svg>
     ),
-    image: 'https://i.ibb.co/NdWT4f2v/istockphoto-1205193642-612x612.jpg'
+    image: 'https://i.ibb.co/NdWT4f2v/istockphoto-1205193642-612x612.jpg',
+    link: '/services/seo',
   },
 ];
 
 export default function Services(){
+  const navigate = useNavigate();
   return(
     <div className='services' id="services">
       <div className='services-content'>
@@ -110,9 +94,9 @@ export default function Services(){
                     {service.title}
                   </p>
                   <div className='services-cta'
-                    onClick={() => window.open("https://wa.me/201158954215", "_blank")}
+                    onClick={() => navigate(service.link)}
                     >
-                    Contact Us
+                    How we do it ?
                   </div>
                   </>
                 }

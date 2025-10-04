@@ -1,0 +1,166 @@
+.web-design-page {
+  min-height: 100vh;
+  background: none;
+  color: #ffffff;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+.service-hero-background{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.service-hero-WebDesign {
+  background: transform !important;
+  padding: 120px 20px 80px;
+  text-align: center;
+  height: 100vh;
+}
+
+.service-hero-content-WebDesign {
+  max-width: 800px;
+  margin: 0 auto;
+  z-index:100;
+}
+
+.service-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  background: none;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.service-subtitle {
+  font-size: 1.3rem;
+  color: #b0b0b0;
+  margin-bottom: 3rem;
+  line-height: 1.6;
+}
+
+.cta-button-WebDesign {
+  background: transform;
+  color: #fff;
+  border: #6333ff;
+  height: 50px;
+  padding: 15px 40px;
+  font-size: 16px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 999px;
+}
+.cta-button-text{
+  font-weight: 600;
+  padding: 15px 40px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(177, 158, 239,0.1);
+  backdrop-filter: blur(15px);
+}
+.service-cta-WebDesign{
+  width: 100%;
+}
+.cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+}
+
+.service-details {
+  padding: 80px 20px;
+  background: #121212;
+}
+
+.details-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  
+}
+
+.details-content h2 {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 3rem;
+  color: #ffffff;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.feature-card {
+  background: #1a1a1a;
+  padding: 2.5rem;
+  border-radius: 12px;
+  border: 1px solid #333;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+  border-color: #667eea;
+  transform: translateY(-5px);
+}
+
+.feature-icon {
+  margin-bottom: 1.5rem;
+  color: #667eea;
+}
+
+.feature-card h3 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  color: #ffffff;
+}
+
+.feature-card p {
+  color: #b0b0b0;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .service-title {
+    font-size: 2.5rem;
+  }
+
+  .service-subtitle {
+    font-size: 1.1rem;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.strategy-card p {
+  color: #b0b0b0;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.strategy-features {
+  list-style: none;
+  text-align: left;
+}
+
+.strategy-features li {
+  padding: 0.5rem 0;
+  color: #b0b0b0;
+  position: relative;
+  padding-right: 1.5rem;
+}
+

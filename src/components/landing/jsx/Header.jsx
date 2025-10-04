@@ -18,10 +18,10 @@ export default function Header(){
       bgColor: "#1F1230",
       textColor: "#fff",
       links: [
-        { label: "Web Development", ariaLabel: "Our Web Development Service", href: "#services" },
-        { label: "Mobile Apps", ariaLabel: "Our Mobile Apps Service", href: "#services" },
-        { label: "UI/UX Design", ariaLabel: "Our UI/UX Design Service", href: "#services" },
-        { label: "Digital Marketing", ariaLabel: "Our Digital Marketing Service", href: "#services" }
+        { label: "Web Development", ariaLabel: "Our Web Development Service", href: "/services/webdesign" },
+        { label: "Mobile Apps", ariaLabel: "Our Mobile Apps Service", href: "/services/mobileapp" },
+        { label: "SEO", ariaLabel: "Search Engine Optimisation", href: "/services/seo" },
+        { label: "Digital Marketing", ariaLabel: "Our Digital Marketing Service", href: "/services/marketing" }
       ]
     },
     {

@@ -14,12 +14,14 @@ export default function Header(){
       ]
     },
     {
-      label: "Projects", 
-      bgColor: "#170D27",
+      label: "Services", 
+      bgColor: "#1F1230",
       textColor: "#fff",
       links: [
-        { label: "Featured", ariaLabel: "Featured Projects" },
-        { label: "Case Studies", ariaLabel: "Project Case Studies" }
+        { label: "Web Development", ariaLabel: "Our Web Development Service" },
+        { label: "Mobile Apps", ariaLabel: "Our Mobile Apps Service" },
+        { label: "UI/UX Design", ariaLabel: "Our UI/UX Design Service" },
+        { label: "Digital Marketing", ariaLabel: "Our Digital Marketing Service" }
       ]
     },
     {
@@ -28,8 +30,8 @@ export default function Header(){
       textColor: "#fff",
       links: [
         { label: "Email", ariaLabel: "Email us" },
-        { label: "Twitter", ariaLabel: "Twitter" },
-        { label: "LinkedIn", ariaLabel: "LinkedIn" }
+        { label: "Phone", ariaLabel: "Phone" },
+        { label: "Facebook", ariaLabel: "Facebook" }
       ]
     }
   ];

@@ -1,0 +1,38 @@
+.Hero{
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.Hero-content{
+  width:85vw;
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.Hero-text{
+  width: 85vw;
+  height: 50vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-top: 100px;
+}
+.Hero-title{
+  z-index: 100;
+  margin-top: 100px;
+  width: 100%;
+}
+.Hero-subtitle{
+  z-index: 100;
+}

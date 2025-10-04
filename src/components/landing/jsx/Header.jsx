@@ -1,8 +1,12 @@
-import React from 'react'
+import React, {useEffect} from 'react'
 import Headerbit from '../../bits/jsx/CardNav'
 import logo from '../../../assets/logo.png'
 import '../css/Header.css'
 export default function Header(){
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const items = [
     {
       label: "About",

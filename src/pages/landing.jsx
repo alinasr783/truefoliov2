@@ -3,6 +3,7 @@ import Header from "../components/landing/jsx/Header";
 import Hero from "../components/landing/jsx/Hero";
 import CTAbtns from "../components/landing/jsx/CTAbtns";
 import Services from "../components/landing/jsx/Services";
+import About from "../components/landing/jsx/About";
 import ScrollStack, {
   ScrollStackItem,
 } from "../components/bits/jsx/ScrollStack";
@@ -17,6 +18,8 @@ export default function Landing() {
       <Hero />
 
       <Services />
+
+      <About />
     </div>
   );
 }

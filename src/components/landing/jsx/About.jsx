@@ -143,7 +143,7 @@ export default function About() {
       </section>
 
       {/* CTA Section */}
-      <section className='about-cta'>
+      {/* <section className='about-cta'>
         <div className='container'>
           <div className='cta-content'>
             <h2>Ready to Start Your Next Project?</h2>
@@ -156,7 +156,7 @@ export default function About() {
             </button>
           </div>
         </div>
-      </section>
+      </section> */}
     </div>
   )
 }

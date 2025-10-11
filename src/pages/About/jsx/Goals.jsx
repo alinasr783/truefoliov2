@@ -219,7 +219,7 @@ export default function Goals() {
       </section>
 
       {/* CTA Section */}
-      <section className='goals-cta'>
+      {/* <section className='goals-cta'>
         <div className='container'>
           <div className='cta-content'>
             <h2>Share Our Vision?</h2>
@@ -232,7 +232,7 @@ export default function Goals() {
             </button>
           </div>
         </div>
-      </section>
+      </section> */}
     </div>
     </>
   )

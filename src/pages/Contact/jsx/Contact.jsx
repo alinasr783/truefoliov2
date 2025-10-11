@@ -187,7 +187,7 @@ export default function Contact() {
       </section>
 
       {/* Quick Action Section */}
-      <section className='quick-action-section'>
+      {/* <section className='quick-action-section'>
         <div className='container'>
           <div className='quick-action-content'>
             <h2>Need Immediate Assistance?</h2>
@@ -210,7 +210,7 @@ export default function Contact() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
     </div>
       </>
   )

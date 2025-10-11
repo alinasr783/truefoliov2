@@ -3,6 +3,8 @@ import '../css/Contact.css'
 import { FaWhatsapp, FaPhone, FaEnvelope, FaMapMarkerAlt, FaFacebook, FaTwitter, FaLinkedin, FaInstagram, FaClock } from 'react-icons/fa'
 import Dither from '../../../components/bits/jsx/Dither'
 import ElectricBorder from '../../../components/bits/jsx/ElectricBorder'
+import Header from '../../../components/landing/jsx/Header'
+import CTA from '../../../components/landing/jsx/CTAbtns'
 export default function Contact() {
   const contactMethods = [
     {
@@ -72,6 +74,9 @@ export default function Contact() {
   ];
 
   return (
+    <>
+      <Header />
+      <CTA />
     <div className='service-page web-design-page'>
       {/* Hero Section */}
       <div className='service-hero-WebDesign'>
@@ -207,5 +212,6 @@ export default function Contact() {
         </div>
       </section>
     </div>
+      </>
   )
 }

@@ -1,8 +1,10 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import GlassSurface from '../../bits/jsx/GlassSurface'
 import '../css/CTAbtns.css'
 
 export default function CTAbtns(){
+  const navigate = useNavigate();
   return(
     <div className='CTAbtns'>
       <GlassSurface
@@ -22,7 +24,9 @@ export default function CTAbtns(){
           >
             Message Us
           </div>
-          <div className='connectbtn'>
+          <div className='connectbtn'
+            onClick={()=> navigate("/signup")}
+            >
             Get Started
           </div>
         </div>

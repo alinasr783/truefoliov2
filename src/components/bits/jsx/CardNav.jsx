@@ -164,7 +164,9 @@ const CardNav = ({
           <button
             type="button"
             className="card-nav-cta-button"
-            style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}>
+            style={{ backgroundColor: buttonBgColor, color: buttonTextColor }}
+            onClick={()=> navigate("/signup")}
+            >
             Get Started
           </button>
         </div>

@@ -1,0 +1,87 @@
+.simple-confirmation {
+  min-height: 100vh;
+  background: #0a0a0f;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.confirmation-card {
+  background: #15151e;
+  border: 1px solid #252535;
+  border-radius: 16px;
+  max-width: 440px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.brand-header {
+  padding: 30px;
+  border-bottom: 1px solid #252535;
+  text-align: center;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #4361ee;
+  letter-spacing: -0.5px;
+}
+
+.confirmation-content {
+  padding: 50px 40px;
+  text-align: center;
+}
+
+.status-indicator {
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #4361ee, #7209b7);
+  margin: 0 auto 30px;
+  border-radius: 2px;
+}
+
+.confirmation-content h1 {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  letter-spacing: -0.3px;
+}
+
+.confirmation-message {
+  color: #a0a0b0;
+  line-height: 1.5;
+  font-size: 15px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.confirmation-footer {
+  padding: 25px 30px;
+  border-top: 1px solid #252535;
+  text-align: center;
+}
+
+.confirmation-footer p {
+  color: #666678;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .confirmation-card {
+    margin: 10px;
+  }
+
+  .confirmation-content {
+    padding: 40px 30px;
+  }
+
+  .brand-header {
+    padding: 25px;
+  }
+}

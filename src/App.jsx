@@ -7,6 +7,10 @@ import SEO from "./pages/Services/jsx/SEO"
 import ScrollStack from "./components/bits/jsx/test"
 import Goals from "./pages/About/jsx/Goals"
 import Contact from "./pages/Contact/jsx/Contact"
+import Signup from "./pages/login/jsx/signup"
+import Login from "./pages/login/jsx/login"
+import ConfirmationSuccess from "./pages/login/jsx/done"
+import EmailVerificationPage from "./pages/login/jsx/EmailVerificationPage"
 import "./App.css"
 
 
@@ -22,6 +26,10 @@ function App() {
         <Route path="/about/goals" element={<Goals />} />
         <Route path="/test" element={<ScrollStack />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/done" element={<ConfirmationSuccess />} />
+        <Route path="/verify-email" element={<EmailVerificationPage />} />
       </Routes>
     </BrowserRouter>
   )

@@ -10,6 +10,6 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ['3100c0b7-b757-45e5-abfb-c6edb1b7efb5-00-94yyiwel8ck7.janeway.replit.dev']
+    allowedHosts: ['cccb828f-04dd-41bd-bd31-3090395797b1-00-1rvuvx1yhgfy.spock.replit.dev']
   },
 })

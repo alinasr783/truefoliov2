@@ -1,6 +1,5 @@
 import React from 'react'
 import '../css/Goals.css'
-
 import Silk from '../../../components/bits/jsx/Silk';
 import Dither from '../../../components/bits/jsx/Dither'
 import ElectricBorder from '../../../components/bits/jsx/ElectricBorder'

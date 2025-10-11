@@ -13,8 +13,7 @@ export default function Header(){
       bgColor: "#0D0716",
       textColor: "#fff",
       links: [
-        { label: "Company", ariaLabel: "About Company" },
-        { label: "Careers", ariaLabel: "About Careers" }
+        { label: "Goals", ariaLabel: "Goals", href: "/about/goals" },
       ]
     },
     {
@@ -33,9 +32,7 @@ export default function Header(){
       bgColor: "#271E37", 
       textColor: "#fff",
       links: [
-        { label: "Email", ariaLabel: "Email us" },
-        { label: "Phone", ariaLabel: "Phone" },
-        { label: "Facebook", ariaLabel: "Facebook" }
+        { label: "Contact Us", ariaLabel: "Contact us", href: "/contact" },
       ]
     }
   ];

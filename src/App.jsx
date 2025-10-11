@@ -6,6 +6,7 @@ import Marketing from "./pages/Services/jsx/Marketing"
 import SEO from "./pages/Services/jsx/SEO"
 import ScrollStack from "./components/bits/jsx/test"
 import Goals from "./pages/About/jsx/Goals"
+import Contact from "./pages/Contact/jsx/Contact"
 import "./App.css"
 
 
@@ -20,6 +21,7 @@ function App() {
         <Route path="/services/seo" element={<SEO />} />
         <Route path="/about/goals" element={<Goals />} />
         <Route path="/test" element={<ScrollStack />} />
+        <Route path="/contact" element={<Contact />} />
       </Routes>
     </BrowserRouter>
   )

@@ -1,13 +1,5 @@
-.Projects-page{
-  overflow-x: hidden;
-  height: 100%;
-  display: flex;
-}
-.Projects-content{
-  width: calc(100vw - 3.1rem);
+.projects-management{
   position: absolute;
-  left: 3.1rem;
-  min-height: 100vw;
-  border : 1px solid blue;
-  
+  top:0;
+  left: 40px;
 }

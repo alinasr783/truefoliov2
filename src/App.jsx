@@ -13,6 +13,7 @@ import ConfirmationSuccess from "./pages/login/jsx/done"
 import EmailVerificationPage from "./pages/login/jsx/EmailVerificationPage"
 import Dashboard from "./pages/dashboard/jsx/main"
 import ProjectsManagementPage from "./pages/dashboard/jsx/projects"
+import ProjectDetails from "./pages/dashboard/jsx/project"
 import "./App.css"
 
 
@@ -34,6 +35,7 @@ function App() {
         <Route path="/verify-email" element={<EmailVerificationPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/projects" element={<ProjectsManagementPage />} />
+        <Route path="/project/:id" element={<ProjectDetails />} />
       </Routes>
     </BrowserRouter>
   )

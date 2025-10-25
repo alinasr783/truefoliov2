@@ -274,18 +274,23 @@ const ProjectManagement = () => {
     try {
       setLoading(true);
 
-      // Fetch projects with client data
+      // 🔹 Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
+      // 🔹 Fetch only this user's projects
       const { data: projectsData, error: projectsError } = await supabase
         .from('project')
         .select(`
           *,
           client:client_id (*)
         `)
+        .eq('client_id', user.id) // ← الفلترة هنا حسب المستخدم الحالي
         .order('created_at', { ascending: false });
 
       if (projectsError) throw projectsError;
 
-      // Transform the data to match our component structure
+      // 🔹 Transform data
       const transformedProjects = projectsData.map(project => ({
         id: project.id,
         name: project.name,
@@ -397,8 +402,8 @@ const ProjectManagement = () => {
   return (
     <>
       <Sidebar />
-      <div className="projects-management">
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 ml-10">
           <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="mb-8">
@@ -565,7 +570,6 @@ const ProjectManagement = () => {
             
           </div>
         </div>
-      </div>
     </>
   );
 };

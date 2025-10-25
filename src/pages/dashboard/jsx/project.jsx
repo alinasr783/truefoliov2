@@ -97,8 +97,40 @@ const ProgressBar = ({ progress }) => {
   );
 };
 
+// Show More Button Component
+const ShowMoreButton = ({ onClick, loading = false, hasMore = true }) => {
+  if (!hasMore) return null;
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      className="w-full py-3 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+    >
+      {loading ? (
+        <div className="flex items-center justify-center gap-2">
+          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          Loading...
+        </div>
+      ) : (
+        <div className="flex items-center justify-center gap-1">
+          Show More
+          <ChevronDown className="w-4 h-4" />
+        </div>
+      )}
+    </button>
+  );
+};
+
 // Collapsible Section Component
-const CollapsibleSection = ({ title, icon: Icon, children, defaultOpen = true }) => {
+const CollapsibleSection = ({ 
+  title, 
+  icon: Icon, 
+  children, 
+  defaultOpen = true,
+  scrollable = false,
+  maxHeight = "400px"
+}) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -128,7 +160,12 @@ const CollapsibleSection = ({ title, icon: Icon, children, defaultOpen = true })
           transition={{ duration: 0.2 }}
           className="px-4 pb-4"
         >
-          {children}
+          <div 
+            className={scrollable ? "overflow-y-auto" : ""}
+            style={scrollable ? { maxHeight } : {}}
+          >
+            {children}
+          </div>
         </motion.div>
       )}
     </motion.section>
@@ -234,13 +271,23 @@ const ProjectDetails = () => {
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeSections, setActiveSections] = useState({
-    progress: false,
+
+  // State for scroll limits
+  const [timelineLimit, setTimelineLimit] = useState(5);
+  const [tasksLimit, setTasksLimit] = useState(5);
+  const [filesLimit, setFilesLimit] = useState(5);
+  const [uiLimit, setUiLimit] = useState(4);
+  const [extensionsLimit, setExtensionsLimit] = useState(4);
+  const [logosLimit, setLogosLimit] = useState(4);
+
+  // Loading states for show more buttons
+  const [loadingMore, setLoadingMore] = useState({
     timeline: false,
     tasks: false,
     files: false,
-    pages: false,
-    extensions: false
+    ui: false,
+    extensions: false,
+    logos: false
   });
 
   useEffect(() => {
@@ -290,6 +337,35 @@ const ProjectDetails = () => {
       console.error("JSON parsing error:", parseError);
       return fallback;
     }
+  };
+
+  // Function to load more items
+  const loadMore = (type) => {
+    setLoadingMore(prev => ({ ...prev, [type]: true }));
+
+    setTimeout(() => {
+      switch (type) {
+        case 'timeline':
+          setTimelineLimit(prev => prev + 5);
+          break;
+        case 'tasks':
+          setTasksLimit(prev => prev + 5);
+          break;
+        case 'files':
+          setFilesLimit(prev => prev + 5);
+          break;
+        case 'ui':
+          setUiLimit(prev => prev + 4);
+          break;
+        case 'extensions':
+          setExtensionsLimit(prev => prev + 4);
+          break;
+        case 'logos':
+          setLogosLimit(prev => prev + 4);
+          break;
+      }
+      setLoadingMore(prev => ({ ...prev, [type]: false }));
+    }, 500);
   };
 
   if (loading) {
@@ -358,6 +434,14 @@ const ProjectDetails = () => {
 
   const totalProjectCost = (project.total_price || 0) + totalExtensionsPrice;
 
+  // Get limited data for display
+  const displayedTimeline = timeline.slice(0, timelineLimit);
+  const displayedTasks = tasks.slice(0, tasksLimit);
+  const displayedFiles = files.slice(0, filesLimit);
+  const displayedUi = ui.slice(0, uiLimit);
+  const displayedExtensions = extensions.slice(0, extensionsLimit);
+  const displayedLogos = logos.slice(0, logosLimit);
+
   return (
     <>
       <Sidebar />
@@ -424,7 +508,7 @@ const ProjectDetails = () => {
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
               {/* Progress Section */}
-              <CollapsibleSection title="Project Progress" icon={PlayCircle}>
+              <CollapsibleSection title="Project Progress" icon={PlayCircle} defaultOpen={true}>
                 <ProgressBar progress={project.progress || 0} />
                 <div className="mt-4 grid grid-cols-2 gap-4">
                   <div>
@@ -448,9 +532,15 @@ const ProjectDetails = () => {
 
               {/* Timeline Section */}
               {timeline.length > 0 && (
-                <CollapsibleSection title="Project Timeline" icon={Clock}>
+                <CollapsibleSection 
+                  title="Project Timeline" 
+                  icon={Clock}
+                  scrollable={true}
+                  maxHeight="400px"
+                  defaultOpen={false}
+                >
                   <div className="space-y-3">
-                    {timeline.map((item, index) => (
+                    {displayedTimeline.map((item, index) => (
                       <div
                         key={index}
                         className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
@@ -486,36 +576,79 @@ const ProjectDetails = () => {
                       </div>
                     ))}
                   </div>
+                  {timeline.length > timelineLimit && (
+                    <div className="mt-4">
+                      <ShowMoreButton 
+                        onClick={() => loadMore('timeline')}
+                        loading={loadingMore.timeline}
+                        hasMore={timeline.length > timelineLimit}
+                      />
+                    </div>
+                  )}
                 </CollapsibleSection>
               )}
 
               {/* Tasks Section */}
               {tasks.length > 0 && (
-                <CollapsibleSection title="Project Tasks" icon={CheckCircle}>
+                <CollapsibleSection 
+                  title="Project Tasks" 
+                  icon={CheckCircle}
+                  scrollable={true}
+                  maxHeight="400px"
+                  defaultOpen={false}
+                >
                   <div className="space-y-2">
-                    {tasks.map((task, index) => (
+                    {displayedTasks.map((task, index) => (
                       <TaskItem key={index} task={task.task} done={task.done} />
                     ))}
                   </div>
+                  {tasks.length > tasksLimit && (
+                    <div className="mt-4">
+                      <ShowMoreButton 
+                        onClick={() => loadMore('tasks')}
+                        loading={loadingMore.tasks}
+                        hasMore={tasks.length > tasksLimit}
+                      />
+                    </div>
+                  )}
                 </CollapsibleSection>
               )}
 
               {/* Files Section */}
               {files.length > 0 && (
-                <CollapsibleSection title="Project Files" icon={FileText}>
+                <CollapsibleSection 
+                  title="Project Files" 
+                  icon={FileText}
+                  scrollable={true}
+                  maxHeight="400px"
+                  defaultOpen={false}
+                >
                   <div className="space-y-2">
-                    {files.map((file, index) => (
+                    {displayedFiles.map((file, index) => (
                       <FileItem key={index} file={file} />
                     ))}
                   </div>
+                  {files.length > filesLimit && (
+                    <div className="mt-4">
+                      <ShowMoreButton 
+                        onClick={() => loadMore('files')}
+                        loading={loadingMore.files}
+                        hasMore={files.length > filesLimit}
+                      />
+                    </div>
+                  )}
                 </CollapsibleSection>
               )}
 
               {/* UI Pages Section */}
               {ui.length > 0 && (
-                <CollapsibleSection title="Website Pages" icon={PieChart}>
+                <CollapsibleSection 
+                  title="Website Pages" 
+                  icon={PieChart}
+                  defaultOpen={false}
+                >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" style={{borderRadius: '25px'}}>
-                    {ui.map((page, index) => (
+                    {displayedUi.map((page, index) => (
                       <div
                         key={index}
                         className={cn(
@@ -578,15 +711,28 @@ const ProjectDetails = () => {
                       </div>
                     ))}
                   </div>
+                  {ui.length > uiLimit && (
+                    <div className="mt-4">
+                      <ShowMoreButton 
+                        onClick={() => loadMore('ui')}
+                        loading={loadingMore.ui}
+                        hasMore={ui.length > uiLimit}
+                      />
+                    </div>
+                  )}
                 </CollapsibleSection>
               )}
 
               {/* Extensions Section */}
               {extensions.length > 0 && (
-                <CollapsibleSection title="Available Extensions" icon={ShoppingCart}>
+                <CollapsibleSection 
+                  title="Available Extensions" 
+                  icon={ShoppingCart}
+                  defaultOpen={false}
+                >
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {extensions.map((extension, index) => (
+                      {displayedExtensions.map((extension, index) => (
                         <div
                           key={index}
                           className={cn(
@@ -664,6 +810,16 @@ const ProjectDetails = () => {
                         </div>
                       </div>
                     </div>
+
+                    {extensions.length > extensionsLimit && (
+                      <div className="mt-4">
+                        <ShowMoreButton 
+                          onClick={() => loadMore('extensions')}
+                          loading={loadingMore.extensions}
+                          hasMore={extensions.length > extensionsLimit}
+                        />
+                      </div>
+                    )}
                   </div>
                 </CollapsibleSection>
               )}
@@ -673,7 +829,7 @@ const ProjectDetails = () => {
             <div className="space-y-6">
               {/* Client Information */}
               {client && (
-                <CollapsibleSection title="Client Information" icon={User}>
+                <CollapsibleSection title="Client Information" icon={User} defaultOpen={true}>
                   <div className="flex items-center gap-3 mb-4">
                     {client.avatar_url ? (
                       <img
@@ -723,7 +879,7 @@ const ProjectDetails = () => {
 
               {/* Live Link */}
               {project.live_link && (
-                <CollapsibleSection title="Live Project" icon={Globe}>
+                <CollapsibleSection title="Live Project" icon={Globe} defaultOpen={true}>
                   <a
                     href={project.live_link}
                     target="_blank"
@@ -738,7 +894,7 @@ const ProjectDetails = () => {
 
               {/* Technologies */}
               {project.technologies && project.technologies.length > 0 && (
-                <CollapsibleSection title="Technologies" icon={Code}>
+                <CollapsibleSection title="Technologies" icon={Code} defaultOpen={true}>
                   <div className="flex flex-wrap gap-2">
                     {project.technologies.map((tech, index) => (
                       <span
@@ -754,7 +910,7 @@ const ProjectDetails = () => {
 
               {/* Active Extensions Summary */}
               {extensions.filter(ext => ext.active).length > 0 && (
-                <CollapsibleSection title="Active Extensions" icon={CheckCircle}>
+                <CollapsibleSection title="Active Extensions" icon={CheckCircle} defaultOpen={false}>
                   <div className="space-y-2">
                     {extensions
                       .filter((ext) => ext.active)
@@ -786,9 +942,9 @@ const ProjectDetails = () => {
 
               {/* Logos */}
               {logos.length > 0 && (
-                <CollapsibleSection title="Project Logos" icon={FileText}>
+                <CollapsibleSection title="Project Logos" icon={FileText} defaultOpen={false}>
                   <div className="grid grid-cols-2 gap-3">
-                    {logos.map((logo, index) => (
+                    {displayedLogos.map((logo, index) => (
                       <img
                         key={index}
                         src={logo.url || logo}
@@ -797,6 +953,15 @@ const ProjectDetails = () => {
                       />
                     ))}
                   </div>
+                  {logos.length > logosLimit && (
+                    <div className="mt-4">
+                      <ShowMoreButton 
+                        onClick={() => loadMore('logos')}
+                        loading={loadingMore.logos}
+                        hasMore={logos.length > logosLimit}
+                      />
+                    </div>
+                  )}
                 </CollapsibleSection>
               )}
             </div>

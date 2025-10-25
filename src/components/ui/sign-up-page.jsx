@@ -49,7 +49,7 @@ export function SignupPage() {
       if (authData.user) {
         // إضافة المستخدم إلى الجدول
         const { error: dbError } = await supabase
-          .from('user')
+          .from('client')
           .insert([
             {
               first_name: formData.firstName,

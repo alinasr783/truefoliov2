@@ -643,7 +643,7 @@ const ProjectDetails = () => {
               {/* UI Pages Section */}
               {ui.length > 0 && (
                 <CollapsibleSection 
-                  title="Website Pages" 
+                  title="Website Components" 
                   icon={PieChart}
                   defaultOpen={false}
                 >

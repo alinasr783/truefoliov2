@@ -277,7 +277,7 @@ const ProjectDetails = () => {
   const [tasksLimit, setTasksLimit] = useState(5);
   const [filesLimit, setFilesLimit] = useState(5);
   const [uiLimit, setUiLimit] = useState(4);
-  const [extensionsLimit, setExtensionsLimit] = useState(4);
+  const [extensionsLimit, setExtensionsLimit] = useState(20);
   const [logosLimit, setLogosLimit] = useState(4);
 
   // Loading states for show more buttons

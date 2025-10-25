@@ -764,7 +764,7 @@ const ProjectDetails = () => {
                             </div>
                             <div className="text-right flex-shrink-0">
                               <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                ${extension.price}
+                                EGP {extension.price}
                               </p>
                               <div className="flex items-center gap-1 justify-end mt-1">
                                 {extension.active ? (
@@ -791,13 +791,13 @@ const ProjectDetails = () => {
                         <div>
                           <p className="text-gray-600 dark:text-gray-400">Base Project</p>
                           <p className="font-semibold text-gray-900 dark:text-gray-100">
-                            ${project.total_price ? project.total_price.toLocaleString() : "0"}
+                            EGP{project.total_price ? project.total_price.toLocaleString() : "0"}
                           </p>
                         </div>
                         <div>
                           <p className="text-gray-600 dark:text-gray-400">Extensions</p>
                           <p className="font-semibold text-gray-900 dark:text-gray-100">
-                            +${totalExtensionsPrice.toLocaleString()}
+                            +EGP{totalExtensionsPrice.toLocaleString()}
                           </p>
                         </div>
                       </div>
@@ -805,7 +805,7 @@ const ProjectDetails = () => {
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-gray-900 dark:text-gray-100">Total Cost</span>
                           <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                            ${totalProjectCost.toLocaleString()}
+                            EGP{totalProjectCost.toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -926,14 +926,14 @@ const ProjectDetails = () => {
                             </span>
                           </div>
                           <span className="text-sm font-semibold text-green-600 dark:text-green-400 flex-shrink-0">
-                            ${extension.price}
+                            EGP{extension.price}
                           </span>
                         </div>
                       ))}
                     <div className="pt-2 border-t border-gray-200 dark:border-gray-600">
                       <div className="flex items-center justify-between font-semibold text-sm">
                         <span>Total:</span>
-                        <span>${totalExtensionsPrice}</span>
+                        <span>EGP{totalExtensionsPrice}</span>
                       </div>
                     </div>
                   </div>

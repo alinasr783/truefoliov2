@@ -935,6 +935,8 @@ const Overview = () => {
               <CollapsibleSection
                 title="Recent Transactions"
                 subtitle="Latest financial activities"
+                action={{ label: "View all projects" }}
+                to="/billing"
                 defaultOpen={true}
               >
                 <div className="space-y-2">

@@ -14,6 +14,7 @@ import EmailVerificationPage from "./pages/login/jsx/EmailVerificationPage"
 import Dashboard from "./pages/dashboard/jsx/main"
 import ProjectsManagementPage from "./pages/dashboard/jsx/projects"
 import ProjectDetails from "./pages/dashboard/jsx/project"
+import BillingAndPayments from "./pages/dashboard/jsx/BillingAndPayments"
 import "./App.css"
 
 
@@ -36,6 +37,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/projects" element={<ProjectsManagementPage />} />
         <Route path="/project/:id" element={<ProjectDetails />} />
+        <Route path="/billing" element={<BillingAndPayments />} />
       </Routes>
     </BrowserRouter>
   )

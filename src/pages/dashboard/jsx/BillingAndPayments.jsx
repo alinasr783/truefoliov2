@@ -50,7 +50,7 @@ const formatRelativeTime = (dateString) => {
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "EGP",
   }).format(amount);
 };
 
@@ -486,6 +486,7 @@ const BillingAndPayments = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [transactionsLimit, setTransactionsLimit] = useState(10);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [wallet, setWallet] = useState(0);
 
   const [filters, setFilters] = useState({
     status: "all",
@@ -536,6 +537,16 @@ const BillingAndPayments = () => {
       const pendingTransactions = transactionsData.filter(
         (t) => t.status === "pending",
       ).length;
+
+      const { data: walletData, error: walletError } = await supabase
+        .from("client")
+        .select("wallet")
+        .eq("id", user.id)
+
+      if (walletError) throw new Error(walletError.message);
+      setWallet(walletData || []);
+
+      
 
       setStats({
         totalIncome,
@@ -766,7 +777,7 @@ const BillingAndPayments = () => {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <StatCard
               title="Total Spend"
               value={formatCurrency(stats?.totalIncome || 0)}
@@ -781,13 +792,13 @@ const BillingAndPayments = () => {
               color="red"
               loading={loading}
             /> */}
-            {/* <StatCard
-              title="Net Revenue"
-              value={formatCurrency(stats?.netRevenue || 0)}
+            <StatCard
+              title="Net balance"
+              value={formatCurrency(wallet[0]?.wallet || 0)}
               icon={DollarSign}
               color="blue"
               loading={loading}
-            /> */}
+            />
             <StatCard
               title="Pending Transactions"
               value={stats?.pendingTransactions || 0}

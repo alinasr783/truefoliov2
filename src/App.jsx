@@ -16,6 +16,7 @@ import ProjectsManagementPage from "./pages/dashboard/jsx/projects"
 import ProjectDetails from "./pages/dashboard/jsx/project"
 import BillingAndPayments from "./pages/dashboard/jsx/BillingAndPayments"
 import ReferralProgram from "./pages/dashboard/jsx/ReferralProgram"
+import Feedback from "./pages/dashboard/jsx/Feedback"
 import "./App.css"
 
 
@@ -40,6 +41,7 @@ function App() {
         <Route path="/project/:id" element={<ProjectDetails />} />
         <Route path="/billing" element={<BillingAndPayments />} />
         <Route path="/referral" element={<ReferralProgram />} />
+        <Route path="/feedback" element={<Feedback />} />
       </Routes>
     </BrowserRouter>
   )

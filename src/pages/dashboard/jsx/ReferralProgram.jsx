@@ -426,23 +426,27 @@ const ReferralProgram = () => {
       const { data: userData, error: userError } = await supabase
         .from("client")
         .select("*")
-        .eq("id", user.id) // 'id' هنا هو UUID مطابق لـ Auth user.id
+        .eq("id", user.id)
         .single();
+
+      
 
       if (userError) throw new Error(userError.message);
       if (!userData) throw new Error("User data not found");
 
       setUserData(userData);
 
+
       // 🧩 Fetch referred members using referred_by (UUID)
       const { data: referredMembersData, error: membersError } = await supabase
         .from("client")
         .select("*")
-        .eq("referred_by", user.id);
+        .eq("referred_by", user.id)
 
       if (membersError) throw new Error(membersError.message);
 
       setReferredMembers(referredMembersData || []);
+      console.log("Referred Members:", referredMembersData)
 
       // 🧩 Get transactions of referred members
       const referredMemberIds = referredMembersData?.map((m) => m.id) || [];
@@ -459,12 +463,14 @@ const ReferralProgram = () => {
             .order("created_at", { ascending: false });
 
         if (transactionsError) throw new Error(transactionsError.message);
+        
 
         // 🧮 Calculate 5% earnings
         earningsHistoryData =
           transactionsData?.map((transaction) => {
             const earnings = transaction.amount * 0.05;
             totalEarnings += earnings;
+
 
             return {
               id: transaction.id,
@@ -526,12 +532,14 @@ const ReferralProgram = () => {
       .filter((earning) => {
         const earningMember = referredMembers.find(
           (m) =>
-            `${m.first_name} ${m.second_name}` === earning.referred_user_name,
+            `${m.first_name} ${m.second_name}` === earning.referred_user_name
         );
-        return earningMember?.client_id === memberId;
+        // استخدم m.id بدل client_id لأن ده الـ UUID الحقيقي
+        return earningMember?.id === memberId;
       })
       .reduce((total, earning) => total + earning.amount, 0);
   };
+
 
   const displayedMembers = referredMembers.slice(0, membersLimit);
   const displayedEarnings = earningsHistory.slice(0, earningsLimit);
@@ -655,9 +663,9 @@ const ReferralProgram = () => {
                 <div className="space-y-4">
                   {displayedMembers.map((member) => (
                     <ReferredMemberItem
-                      key={member.client_id}
+                      key={member.id}
                       member={member}
-                      earnings={getMemberEarnings(member.client_id)}
+                      earnings={getMemberEarnings(member.id)}
                     />
                   ))}
 

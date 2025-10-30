@@ -4,50 +4,50 @@ import { FaRocket, FaGem, FaHandshake, FaChartLine, FaEye, FaAward, FaBullseye }
 
 export default function About() {
   const stats = [
-    { number: '150+', label: 'مشاريع مكتملة' },
-    { number: '50+', label: 'عملاء سعداء' },
-    { number: '5+', label: 'سنوات خبرة' },
-    { number: '24/7', label: 'دعم مستمر' }
+    { number: '150+', label: 'Projects Completed' },
+    { number: '50+', label: 'Happy Clients' },
+    { number: '5+', label: 'Years Experience' },
+    { number: '24/7', label: 'Ongoing Support' }
   ];
 
   const values = [
     {
       icon: <FaRocket />,
-      title: 'الابتكار',
-      description: 'نستكشف باستمرار أحدث التقنيات والحلول المبتكرة لنظل في الصدارة.'
+      title: 'Innovation',
+      description: 'We constantly explore the latest technologies and creative solutions to stay ahead.'
     },
     {
       icon: <FaGem />,
-      title: 'الجودة',
-      description: 'نلتزم بأعلى معايير الجودة في كل مشروع لضمان التميّز.'
+      title: 'Quality',
+      description: 'We commit to the highest quality standards in every project.'
     },
     {
       icon: <FaHandshake />,
-      title: 'الشفافية',
-      description: 'نعمل بعلاقات واضحة وصادقة مع عملائنا ونُطلعهم على كل المستجدات.'
+      title: 'Transparency',
+      description: 'We work with clear, honest relationships and keep clients informed.'
     },
     {
       icon: <FaChartLine />,
-      title: 'النمو',
-      description: 'نركّز على تمكين عملائنا من تحقيق نمو مستدام ونجاح طويل الأمد.'
+      title: 'Growth',
+      description: 'We focus on enabling clients to achieve sustainable growth and long-term success.'
     }
   ];
 
   const goals = [
     {
       icon: <FaBullseye />,
-      title: 'رسالتنا',
-      description: 'تقديم حلول رقمية مبتكرة تمكّن الشركات من تحقيق أهدافها عبر تقنيات حديثة واستراتيجيات إبداعية.'
+      title: 'Our Mission',
+      description: 'Deliver innovative digital solutions that empower companies to achieve their goals.'
     },
     {
       icon: <FaEye />,
-      title: 'رؤيتنا',
-      description: 'أن نكون الشريك الرقمي المفضل للشركات الطموحة في المنطقة بتحويل الأفكار إلى نجاح ملموس.'
+      title: 'Our Vision',
+      description: 'Be the preferred digital partner for ambitious companies by turning ideas into tangible success.'
     },
     {
       icon: <FaAward />,
-      title: 'هدفنا',
-      description: 'تجاوز توقعات العملاء دائمًا عبر تسليم المشاريع في الوقت المحدد وبجودة ودعم لا يُضاهى.'
+      title: 'Our Goal',
+      description: 'Consistently exceed client expectations with timely delivery, quality, and unmatched support.'
     }
   ];
 
@@ -56,9 +56,9 @@ export default function About() {
       {/* Hero Section */}
       <section className='about-hero'>
         <div className='about-hero-content'>
-          <h1 className='about-title'>من نحن</h1>
+          <h1 className='about-title'>About Us</h1>
           <p className='about-subtitle'>
-            شركة حلول رقمية رائدة تقدّم خدمات شاملة لمساعدة عملائنا على النمو والتميّز في العالم الرقمي عبر الابتكار والخبرة.
+            We are a leading digital solutions company helping clients grow and excel through innovation and expertise.
           </p>
           <div className='hero-stats'>
             {stats.map((stat, index) => (
@@ -75,8 +75,8 @@ export default function About() {
       <section className='goals-section'>
         <div className='container'>
           <div className='section-header'>
-            <h2>رسالتنا ورؤيتنا</h2>
-            <p>ما يدفعنا للتقدّم ويحدّد مسارنا نحو النجاح</p>
+            <h2>Our Purpose</h2>
+            <p>What drives us forward and shapes our path to success</p>
           </div>
           <div className='goals-grid'>
             {goals.map((goal, index) => (
@@ -94,8 +94,8 @@ export default function About() {
       <section className='values-section'>
         <div className='container'>
           <div className='section-header'>
-            <h2>قيمنا</h2>
-            <p>المبادئ التي توجه عملنا وعلاقاتنا</p>
+            <h2>Our Values</h2>
+            <p>The principles that guide our work and relationships</p>
           </div>
           <div className='values-grid'>
             {values.map((value, index) => (
@@ -113,29 +113,29 @@ export default function About() {
       <section className='features-section'>
         <div className='container'>
           <div className='section-header'>
-            <h2>لماذا تختارنا</h2>
-            <p>ما يجعلنا الشريك الأنسب لرحلتك الرقمية</p>
+            <h2>Why Choose Us</h2>
+            <p>What makes us the right partner for your digital journey</p>
           </div>
           <div className='features-grid'>
             <div className='feature-item'>
               <div className='feature-number'>01</div>
-              <h3>فريق خبراء</h3>
-              <p>يضم فريقنا محترفين ذوي خبرة وشغف بالتقنية والابتكار.</p>
+              <h3>Expert Team</h3>
+              <p>Our team includes experienced professionals with a passion for technology and innovation.</p>
             </div>
             <div className='feature-item'>
               <div className='feature-number'>02</div>
-              <h3>حلول مخصّصة</h3>
-              <p>نُصمّم خدماتنا لتناسب احتياجات وأهداف عملك بدقّة.</p>
+              <h3>Custom Solutions</h3>
+              <p>We tailor our services to precisely meet your business needs and goals.</p>
             </div>
             <div className='feature-item'>
               <div className='feature-number'>03</div>
-              <h3>نتائج مثبَتة</h3>
-              <p>لدينا سجل ناجح في تنفيذ مشاريع تحقق قيمة حقيقية للأعمال.</p>
+              <h3>Proven Results</h3>
+              <p>We have a strong track record of delivering projects that create real business value.</p>
             </div>
             <div className='feature-item'>
               <div className='feature-number'>04</div>
-              <h3>دعم مستمر</h3>
-              <p>نقدّم دعمًا وصيانة مستمرة لضمان نجاحك على المدى الطويل.</p>
+              <h3>Ongoing Support</h3>
+              <p>We provide continuous support and maintenance to ensure long-term success.</p>
             </div>
           </div>
         </div>

@@ -20,7 +20,7 @@ export default function Hero(){
       <div className='Hero-content'>
         <div className='Hero-text'>
           <div className='Hero-title'>
-            <h1 style={{fontSize: '2rem', marginBottom: '1rem'}}>إنشاء موقع إلكتروني احترافي لشركتك</h1>
+            <h1 style={{fontSize: '2rem', marginBottom: '1rem'}}>Create a professional website for your business</h1>
             <div style={{position: 'relative', height: '300px'}}>
               <TextPressure
                 text="TrueFolio"
@@ -37,7 +37,7 @@ export default function Hero(){
             </div>
           </div>
           <div className='Hero-subtitle'>
-            <p style={{color:'#b0b0b0', marginBottom:'1rem'}}>مواقع سريعة، مُحسّنة لـ SEO، وتجربة استخدام راقية</p>
+            <p style={{color:'#b0b0b0', marginBottom:'1rem'}}>Fast, SEO-optimized websites with elegant UX</p>
             <div style={{position: 'relative', height: '300px'}}>
               <TextPressure
                 text="Tailored - Websites, Timeless - Style"

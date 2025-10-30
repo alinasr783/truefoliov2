@@ -12,7 +12,7 @@ export default function CTAbtns(){
         <div className='CTAbtns-content'>
           <div 
             className="getbtn cursor-pointer"
-            aria-label="تواصل معنا عبر واتساب"
+            aria-label="Message us on WhatsApp"
             onClick={() => window.open("https://wa.me/201158954215", "_blank")}
           >
             Message Us
@@ -37,7 +37,7 @@ export default function CTAbtns(){
           <div className='CTAbtns-content'>
             <div 
               className="getbtn cursor-pointer"
-              aria-label="تواصل معنا عبر واتساب"
+              aria-label="Message us on WhatsApp"
               onClick={() => window.open("https://wa.me/201158954215", "_blank")}
             >
               Message Us

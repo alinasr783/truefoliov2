@@ -13,16 +13,16 @@ export default function Landing() {
   return (
     <div className="landing">
       <SeoHead
-        title="إنشاء موقع إلكتروني احترافي | TrueFolio"
-        description="نقدّم في TrueFolio خدمة إنشاء موقع إلكتروني احترافي وسريع ومُحسّن لمحركات البحث، مع تصميم عصري وتجربة مستخدم ممتازة تناسب شركتك."
-        keywords="إنشاء موقع إلكتروني, تصميم مواقع, تطوير مواقع, شركة برمجة, متجر إلكتروني, مواقع احترافية, SEO"
+        title="Professional Website Creation | TrueFolio"
+        description="TrueFolio delivers fast, SEO-optimized, modern websites with elegant UX tailored to your business."
+        keywords="website creation, web design, web development, company website, e-commerce store, SEO"
         canonical="https://truefolio.vercel.app/"
-        ogTitle="إنشاء موقع إلكتروني احترافي | TrueFolio"
-        ogDescription="مواقع سريعة ومُحسّنة لـ SEO بتصميم عصري وتجربة مستخدم ممتازة."
+        ogTitle="Professional Website Creation | TrueFolio"
+        ogDescription="Fast, SEO-optimized websites with elegant UX for your business."
         ogImage="https://truefolio.vercel.app/logo.png"
         ogUrl="https://truefolio.vercel.app/"
-        twitterTitle="إنشاء موقع إلكتروني احترافي | TrueFolio"
-        twitterDescription="مواقع سريعة ومُحسّنة لـ SEO بتصميم عصري وتجربة مستخدم ممتازة."
+        twitterTitle="Professional Website Creation | TrueFolio"
+        twitterDescription="Fast, SEO-optimized websites with elegant UX for your business."
         twitterImage="https://truefolio.vercel.app/logo.png"
         jsonLd={[
           {
@@ -30,11 +30,11 @@ export default function Landing() {
             "@type": "WebPage",
             name: "TrueFolio Home",
             description:
-              "صفحة الهبوط لخدمة إنشاء موقع إلكتروني احترافي وسريع ومُحسّن لـ SEO",
+              "Landing page for professional, fast, SEO-optimized website creation",
             url: "https://truefolio.vercel.app/",
             mainEntity: {
               "@type": "Service",
-              name: "إنشاء موقع إلكتروني",
+              name: "Website Creation",
               serviceType: "Website Development",
               provider: {
                 "@type": "Organization",
@@ -56,11 +56,11 @@ export default function Landing() {
 
       <Hero />
 
-      <Suspense fallback={<div style={{padding: '2rem', textAlign: 'center', color: '#999'}}>...جارِ تحميل الخدمات</div>}>
+      <Suspense fallback={<div style={{padding: '2rem', textAlign: 'center', color: '#999'}}>...Loading services</div>}>
         <Services />
       </Suspense>
 
-      <Suspense fallback={<div style={{padding: '2rem', textAlign: 'center', color: '#999'}}>...جارِ تحميل من نحن</div>}>
+      <Suspense fallback={<div style={{padding: '2rem', textAlign: 'center', color: '#999'}}>...Loading About Us</div>}>
         <About />
       </Suspense>
     </div>

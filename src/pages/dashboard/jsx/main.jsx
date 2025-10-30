@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Sidebar from "./Sidebar";
 import { supabase } from "@/lib/supabase";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   TrendingUp,
   DollarSign,
@@ -344,16 +344,14 @@ const CollapsibleSection = ({
           </div>
         </div>
         {action && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(to);
-            }}
+          <Link
+            to={to}
+            onClick={(e) => e.stopPropagation()}
             className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-medium"
           >
             {action.label}
             <ChevronRight className="w-4 h-4" />
-          </button>
+          </Link>
         )}
       </button>
 

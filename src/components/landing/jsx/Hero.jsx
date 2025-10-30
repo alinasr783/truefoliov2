@@ -37,7 +37,7 @@ export default function Hero(){
             </div>
           </div>
           <div className='Hero-subtitle'>
-            <p style={{color:'#b0b0b0', marginBottom:'1rem'}}>Fast, SEO-optimized websites with elegant UX</p>
+            <p style={{color:'#b0b0b0', marginBottom:'1rem'}}>Create Your Professional Website with TrueFolio</p>
             <div style={{position: 'relative', height: '300px'}}>
               <TextPressure
                 text="Tailored - Websites, Timeless - Style"

@@ -101,7 +101,7 @@ export default function TiltedCard({
           alt={altText}
           loading="lazy"
           decoding="async"
-          fetchpriority="low"
+          fetchPriority="low"
           className="tilted-card-img"
           style={{
             width: imageWidth,

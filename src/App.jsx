@@ -17,6 +17,9 @@ import ProjectDetails from "./pages/dashboard/jsx/project"
 import BillingAndPayments from "./pages/dashboard/jsx/BillingAndPayments"
 import ReferralProgram from "./pages/dashboard/jsx/ReferralProgram"
 import Feedback from "./pages/dashboard/jsx/Feedback"
+import ToolsPage from "./pages/dashboard/jsx/Tools"
+import Tool_ImageToSite from "./pages/dashboard/jsx/Tool_ImageToSite"
+import SiteViewer from "./pages/site/SiteViewer"
 import "./App.css"
 
 
@@ -37,11 +40,16 @@ function App() {
         <Route path="/done" element={<ConfirmationSuccess />} />
         <Route path="/verify-email" element={<EmailVerificationPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/tools" element={<ToolsPage />} />
+        <Route path="/dashboard/tools/image-to-site" element={<Tool_ImageToSite />} />
         <Route path="/projects" element={<ProjectsManagementPage />} />
         <Route path="/project/:id" element={<ProjectDetails />} />
         <Route path="/billing" element={<BillingAndPayments />} />
         <Route path="/referral" element={<ReferralProgram />} />
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/tools" element={<ToolsPage />} />
+        <Route path="/tools/image-to-site" element={<Tool_ImageToSite />} />
+        <Route path="/:username/image-to-site/:ordinal" element={<SiteViewer />} />
       </Routes>
     </BrowserRouter>
   )

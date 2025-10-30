@@ -99,6 +99,9 @@ export default function TiltedCard({
         <motion.img
           src={imageSrc}
           alt={altText}
+          loading="lazy"
+          decoding="async"
+          fetchpriority="low"
           className="tilted-card-img"
           style={{
             width: imageWidth,

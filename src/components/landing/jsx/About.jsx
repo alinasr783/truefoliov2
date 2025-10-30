@@ -4,50 +4,50 @@ import { FaRocket, FaGem, FaHandshake, FaChartLine, FaEye, FaAward, FaBullseye }
 
 export default function About() {
   const stats = [
-    { number: '150+', label: 'Projects Completed' },
-    { number: '50+', label: 'Happy Clients' },
-    { number: '5+', label: 'Years Experience' },
-    { number: '24/7', label: 'Support' }
+    { number: '150+', label: 'مشاريع مكتملة' },
+    { number: '50+', label: 'عملاء سعداء' },
+    { number: '5+', label: 'سنوات خبرة' },
+    { number: '24/7', label: 'دعم مستمر' }
   ];
 
   const values = [
     {
       icon: <FaRocket />,
-      title: 'Innovation',
-      description: 'We constantly explore the latest technologies and innovative solutions to stay ahead in the digital landscape.'
+      title: 'الابتكار',
+      description: 'نستكشف باستمرار أحدث التقنيات والحلول المبتكرة لنظل في الصدارة.'
     },
     {
       icon: <FaGem />,
-      title: 'Quality',
-      description: 'We commit to the highest quality standards in every project, ensuring excellence in delivery and performance.'
+      title: 'الجودة',
+      description: 'نلتزم بأعلى معايير الجودة في كل مشروع لضمان التميّز.'
     },
     {
       icon: <FaHandshake />,
-      title: 'Transparency',
-      description: 'We maintain clear and honest relationships with our clients, keeping them informed at every stage.'
+      title: 'الشفافية',
+      description: 'نعمل بعلاقات واضحة وصادقة مع عملائنا ونُطلعهم على كل المستجدات.'
     },
     {
       icon: <FaChartLine />,
-      title: 'Growth',
-      description: 'We focus on helping our clients achieve sustainable growth and long-term success in their markets.'
+      title: 'النمو',
+      description: 'نركّز على تمكين عملائنا من تحقيق نمو مستدام ونجاح طويل الأمد.'
     }
   ];
 
   const goals = [
     {
       icon: <FaBullseye />,
-      title: 'Our Mission',
-      description: 'To deliver innovative digital solutions that empower businesses to achieve their goals through cutting-edge technology and creative strategies.'
+      title: 'رسالتنا',
+      description: 'تقديم حلول رقمية مبتكرة تمكّن الشركات من تحقيق أهدافها عبر تقنيات حديثة واستراتيجيات إبداعية.'
     },
     {
       icon: <FaEye />,
-      title: 'Our Vision',
-      description: 'To be the preferred digital partner for ambitious companies in the region, transforming ideas into tangible success through exceptional technological solutions.'
+      title: 'رؤيتنا',
+      description: 'أن نكون الشريك الرقمي المفضل للشركات الطموحة في المنطقة بتحويل الأفكار إلى نجاح ملموس.'
     },
     {
       icon: <FaAward />,
-      title: 'Our Goal',
-      description: 'To consistently exceed client expectations by delivering projects on time, within budget, and with unmatched quality and support.'
+      title: 'هدفنا',
+      description: 'تجاوز توقعات العملاء دائمًا عبر تسليم المشاريع في الوقت المحدد وبجودة ودعم لا يُضاهى.'
     }
   ];
 
@@ -56,10 +56,9 @@ export default function About() {
       {/* Hero Section */}
       <section className='about-hero'>
         <div className='about-hero-content'>
-          <h1 className='about-title'>About Us</h1>
+          <h1 className='about-title'>من نحن</h1>
           <p className='about-subtitle'>
-            A leading digital solutions company providing comprehensive services that help our clients 
-            grow and excel in the digital world through innovation and expertise.
+            شركة حلول رقمية رائدة تقدّم خدمات شاملة لمساعدة عملائنا على النمو والتميّز في العالم الرقمي عبر الابتكار والخبرة.
           </p>
           <div className='hero-stats'>
             {stats.map((stat, index) => (
@@ -76,8 +75,8 @@ export default function About() {
       <section className='goals-section'>
         <div className='container'>
           <div className='section-header'>
-            <h2>Our Purpose</h2>
-            <p>What drives us forward and defines our path to success</p>
+            <h2>رسالتنا ورؤيتنا</h2>
+            <p>ما يدفعنا للتقدّم ويحدّد مسارنا نحو النجاح</p>
           </div>
           <div className='goals-grid'>
             {goals.map((goal, index) => (
@@ -95,8 +94,8 @@ export default function About() {
       <section className='values-section'>
         <div className='container'>
           <div className='section-header'>
-            <h2>Our Values</h2>
-            <p>The principles that guide our work and relationships</p>
+            <h2>قيمنا</h2>
+            <p>المبادئ التي توجه عملنا وعلاقاتنا</p>
           </div>
           <div className='values-grid'>
             {values.map((value, index) => (
@@ -114,29 +113,29 @@ export default function About() {
       <section className='features-section'>
         <div className='container'>
           <div className='section-header'>
-            <h2>Why Choose Us</h2>
-            <p>What makes us the right partner for your digital journey</p>
+            <h2>لماذا تختارنا</h2>
+            <p>ما يجعلنا الشريك الأنسب لرحلتك الرقمية</p>
           </div>
           <div className='features-grid'>
             <div className='feature-item'>
               <div className='feature-number'>01</div>
-              <h3>Expert Team</h3>
-              <p>Our team consists of experienced professionals who are passionate about technology and innovation.</p>
+              <h3>فريق خبراء</h3>
+              <p>يضم فريقنا محترفين ذوي خبرة وشغف بالتقنية والابتكار.</p>
             </div>
             <div className='feature-item'>
               <div className='feature-number'>02</div>
-              <h3>Custom Solutions</h3>
-              <p>We tailor our services to meet your specific business needs and objectives.</p>
+              <h3>حلول مخصّصة</h3>
+              <p>نُصمّم خدماتنا لتناسب احتياجات وأهداف عملك بدقّة.</p>
             </div>
             <div className='feature-item'>
               <div className='feature-number'>03</div>
-              <h3>Proven Results</h3>
-              <p>We have a track record of delivering successful projects that drive real business value.</p>
+              <h3>نتائج مثبَتة</h3>
+              <p>لدينا سجل ناجح في تنفيذ مشاريع تحقق قيمة حقيقية للأعمال.</p>
             </div>
             <div className='feature-item'>
               <div className='feature-number'>04</div>
-              <h3>Ongoing Support</h3>
-              <p>We provide continuous support and maintenance to ensure your long-term success.</p>
+              <h3>دعم مستمر</h3>
+              <p>نقدّم دعمًا وصيانة مستمرة لضمان نجاحك على المدى الطويل.</p>
             </div>
           </div>
         </div>

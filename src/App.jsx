@@ -19,7 +19,9 @@ import ReferralProgram from "./pages/dashboard/jsx/ReferralProgram"
 import Feedback from "./pages/dashboard/jsx/Feedback"
 import ToolsPage from "./pages/dashboard/jsx/Tools"
 import Tool_ImageToSite from "./pages/dashboard/jsx/Tool_ImageToSite"
+import Tool_TextToArticle from "./pages/dashboard/jsx/Tool_TextToArticle"
 import SiteViewer from "./pages/site/SiteViewer"
+import SiteViewerGeneric from "./pages/site/SiteViewerGeneric"
 import "./App.css"
 
 
@@ -42,6 +44,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard/tools" element={<ToolsPage />} />
         <Route path="/dashboard/tools/image-to-site" element={<Tool_ImageToSite />} />
+        <Route path="/dashboard/tools/text-to-article" element={<Tool_TextToArticle />} />
         <Route path="/projects" element={<ProjectsManagementPage />} />
         <Route path="/project/:id" element={<ProjectDetails />} />
         <Route path="/billing" element={<BillingAndPayments />} />
@@ -49,7 +52,9 @@ function App() {
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/tools" element={<ToolsPage />} />
         <Route path="/tools/image-to-site" element={<Tool_ImageToSite />} />
+        <Route path="/tools/text-to-article" element={<Tool_TextToArticle />} />
         <Route path="/:username/image-to-site/:ordinal" element={<SiteViewer />} />
+        <Route path="/:username/:toolId/:ordinal" element={<SiteViewerGeneric />} />
       </Routes>
     </BrowserRouter>
   )

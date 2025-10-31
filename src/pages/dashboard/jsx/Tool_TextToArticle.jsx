@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Sidebar from "./Sidebar";
 import { supabase } from "@/lib/supabase";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { Sparkles, Globe, Type, Languages, ListChecks, Link as LinkIcon, Copy, Download, Trash2 } from "lucide-react";
 
 // Pricing
@@ -17,15 +18,19 @@ const clean = (s) => String(s || "").trim();
 function buildPrompt({ sourceText, sourceUrl, style, dialect, paragraphs, keywords }) {
   const srcText = clean(sourceText);
   const srcUrl = clean(sourceUrl);
-  const kw = Array.isArray(keywords) ? keywords : String(keywords || "").split(",").map((k) => clean(k)).filter(Boolean);
-  const kwStr = kw.length ? `الكلمات المفتاحية: ${kw.join(", ")}.` : "";
+  const kw = Array.isArray(keywords)
+    ? keywords
+    : String(keywords || "").split(",").map((k) => clean(k)).filter(Boolean);
+  const kwStr = kw.length ? `Keywords: ${kw.join(", ")}.` : "";
   const sourceBlock = srcText
-    ? `اكتب مقالًا معتمدًا على النص التالي:\n\n"""\n${srcText}\n"""\n\n`
-    : (srcUrl ? `اكتب مقالًا مستلهمًا من الصفحة المشار إليها بالرابط التالي: ${srcUrl}. إذا تعذر الوصول المباشر للمحتوى بسبب قيود المتصفح، استخدم سياق الرابط كموضوع عام دون نقل حرفي.` : `اكتب مقالًا حول موضوع عام مناسب.`);
+    ? `Write an article based on the following text:\n\n"""\n${srcText}\n"""\n\n`
+    : (srcUrl
+        ? `Write an article inspired by the page at: ${srcUrl}. If direct fetching is blocked by the browser, use the general topic of the URL without verbatim copying.`
+        : `Write an article on a suitable general topic.`);
   return [
     sourceBlock,
-    `المتطلبات: الأسلوب: ${style}. اللهجة: ${dialect}. عدد الفقرات: ${paragraphs}. ${kwStr}`,
-    `التنسيق: قسّم النص إلى فقرات واضحة، كل فقرة 3-6 جمل. استخدم عناوين فرعية عند الحاجة. أدخل الكلمات المفتاحية طبيعيًا دون حشو أو تكرار مزعج. لا تُدرج تنسيق Markdown، أعد النص عاديًا.`,
+    `Requirements: Style: ${style}. Paragraphs: ${paragraphs}. ${kwStr}`,
+    `Formatting: Divide into clear paragraphs of 3–6 sentences each. Use simple headings if helpful. Integrate the keywords naturally without stuffing. Return plain text only (no Markdown). Language: English.`,
   ].join("\n\n");
 }
 
@@ -66,17 +71,49 @@ async function callGemini(prompt) {
   throw lastErr || new Error("Gemini failed");
 }
 
+// Translate English article to Arabic in a chosen dialect
+async function translateToArabic(text, dialect) {
+  const dialectHint = String(dialect || "فصحى").includes("مصري") ? "Egyptian Arabic" : "Modern Standard Arabic";
+  const prompt = [
+    `Translate the following English article into Arabic (${dialectHint}).`,
+    `Keep the structure and paragraphing. Return plain text only (no Markdown).`,
+    `Avoid diacritics; keep language natural and readable.`,
+    `\n\n"""\n${clean(text)}\n"""\n`
+  ].join(" \n");
+  return await callGemini(prompt);
+}
+
+// Generate concise English and Arabic titles for the article
+async function generateTitles(articleEn) {
+  const prompt = [
+    `Propose compelling titles in English and Arabic for the following article.`,
+    `Respond STRICTLY as JSON with keys: title_en, title_ar. Each <= 60 characters.`,
+    `\n\n"""\n${clean(articleEn)}\n"""\n`
+  ].join(" \n");
+  const raw = await callGemini(prompt);
+  try {
+    const obj = JSON.parse(raw);
+    return { en: clean(obj.title_en), ar: clean(obj.title_ar) };
+  } catch {
+    // Fallback: try to parse lines
+    const lines = raw.split(/\r?\n/).map((l) => clean(l)).filter(Boolean);
+    const en = lines.find((l) => /english|en/i.test(l)) || lines[0] || "Untitled";
+    const ar = lines.find((l) => /arabic|ar/i.test(l)) || lines[1] || "بدون عنوان";
+    return { en: clean(en.replace(/^[^:]*:\s*/, "")), ar: clean(ar.replace(/^[^:]*:\s*/, "")) };
+  }
+}
+
 function buildArticleHtml({ title, articleText, username }) {
   const safeTitle = clean(title) || "AI Article";
   const safeText = clean(articleText).replace(/</g, "&lt;").replace(/>/g, "&gt;");
   return `<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${safeTitle}</title>
     <meta name="robots" content="index, follow" />
-    <meta name="description" content="مقال مولّد بواسطة الذكاء الاصطناعي" />
+    <meta name="description" content="AI-generated article" />
     <style>
       :root { color-scheme: dark; }
       * { box-sizing: border-box; }
@@ -120,17 +157,23 @@ export default function Tool_TextToArticle() {
   const [ordinal, setOrdinal] = useState(1);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [title, setTitle] = useState("مقال جديد");
+  const [title, setTitle] = useState("New Article");
+  const [titleEn, setTitleEn] = useState("");
+  const [titleAr, setTitleAr] = useState("");
   const [sourceType, setSourceType] = useState("text"); // 'text' | 'url'
   const [sourceText, setSourceText] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
-  const [style, setStyle] = useState("رسمية");
+  const [style, setStyle] = useState("Formal");
   const [dialect, setDialect] = useState("فصحى");
   const [paragraphs, setParagraphs] = useState(5);
   const [keywordsInput, setKeywordsInput] = useState("");
   const [articleText, setArticleText] = useState("");
+  const [articleTextAr, setArticleTextAr] = useState("");
   const [finalSiteUrl, setFinalSiteUrl] = useState("");
   const [history, setHistory] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [purchasedThisRun, setPurchasedThisRun] = useState(false);
   const toolId = "text-to-article";
 
   useEffect(() => {
@@ -156,6 +199,13 @@ export default function Tool_TextToArticle() {
             .eq("tool_id", toolId)
             .range(0, 0);
           if (typeof count === "number") setOrdinal((count || 0) + 1);
+
+          // Load user projects
+          const { data: projData, error: projErr } = await supabase
+            .from("project")
+            .select("id, name, supabase_url, supabase_anon, blog_tabel_name, client_id")
+            .eq("client_id", auth.user.id);
+          if (!projErr) setProjects(projData || []);
         }
       } catch (e) {
         console.error("[TextToArticle] init error:", e);
@@ -207,18 +257,33 @@ export default function Tool_TextToArticle() {
         sourceText,
         sourceUrl,
         style,
-        dialect,
         paragraphs,
         keywords: keywordsInput,
       });
       const text = await callGemini(prompt);
       setArticleText(text);
-      if (!title || title === "مقال جديد") {
-        const base = clean(sourceText).slice(0, 24) || clean(sourceUrl).slice(0, 24) || "مقال";
-        setTitle(`${base} — ${style}`);
+      // Arabic translation for convenience
+      try {
+        const ar = await translateToArabic(text, dialect);
+        setArticleTextAr(ar);
+      } catch (e) {
+        console.warn("[TextToArticle] Arabic translation failed:", e);
+      }
+      // Titles EN/AR
+      try {
+        const t = await generateTitles(text);
+        setTitleEn(t.en || "Untitled");
+        setTitleAr(t.ar || "بدون عنوان");
+        setTitle(t.en || "Untitled");
+      } catch (e) {
+        console.warn("[TextToArticle] Title generation failed:", e);
+        if (!title || title === "New Article") {
+          const base = clean(sourceText).slice(0, 24) || clean(sourceUrl).slice(0, 24) || "Article";
+          setTitle(`${base} — ${style}`);
+        }
       }
     } catch (e) {
-      alert("فشل توليد المقال: " + (e.message || String(e)));
+      alert("Failed to generate the article: " + (e.message || String(e)));
       console.error("[TextToArticle] generate error:", e);
     } finally {
       setGenerating(false);
@@ -236,11 +301,42 @@ export default function Tool_TextToArticle() {
     return pub.publicUrl;
   };
 
+  // Ensure the tool record exists to satisfy FK constraints
+  const ensureToolExists = async () => {
+    try {
+      const { data: existsData, error: existsErr } = await supabase
+        .from("tools")
+        .select("tool_id")
+        .eq("tool_id", toolId)
+        .limit(1);
+      if (existsErr) {
+        // RLS may prevent reads; continue and try insert
+        console.warn("[TextToArticle] Unable to check tools table:", existsErr.message || existsErr);
+      }
+      const exists = Array.isArray(existsData) && existsData.length > 0;
+      if (!exists) {
+        const { error: insertErr } = await supabase.from("tools").insert({
+          tool_id: toolId,
+          name: "Text to Article",
+          price: PRICE_EGP,
+          is_active: true,
+        });
+        if (insertErr) {
+          // If insert fails due to RLS, instructive log only; purchase may still fail
+          console.warn("[TextToArticle] Tool insert failed (likely RLS):", insertErr.message || insertErr);
+        }
+      }
+    } catch (e) {
+      console.warn("[TextToArticle] ensureToolExists error:", e);
+    }
+  };
+
   const saveArticleInstance = async () => {
-    if (!user) return alert("يجب تسجيل الدخول.");
-    if (!articleText) return alert("فضلاً قم بتوليد المقال أولًا.");
+    if (!user) return alert("Please login.");
+    if (!articleText) return alert("Generate the article first.");
     try {
       setSaving(true);
+      await ensureToolExists();
       const { count } = await supabase
         .from("tool_instances")
         .select("id", { count: "exact" })
@@ -256,6 +352,7 @@ export default function Tool_TextToArticle() {
       const sitePublicUrl = await uploadToStorage(SITE_BUCKET, sitePath, htmlBlob, "text/html; charset=utf-8");
       const friendlyUrl = friendly(username, ordForPath);
 
+      // Charge wallet + record instance
       const { data: purchase, error: purchaseErr } = await supabase.rpc("purchase_tool_instance", {
         p_client_id: user.id,
         p_tool_id: toolId,
@@ -267,16 +364,75 @@ export default function Tool_TextToArticle() {
       if (purchaseErr) throw purchaseErr;
 
       setFinalSiteUrl(friendlyUrl);
-      alert("تم حفظ المقال وخصم تكلفة الخدمة.");
+      setPurchasedThisRun(true);
+      alert("Article saved and service purchased.");
       await loadHistory();
     } catch (e) {
       const msg = e?.message || String(e);
       if (/insufficient/i.test(msg)) {
-        alert("رصيد المحفظة غير كافٍ لهذه الخدمة.");
+        alert("Insufficient wallet balance for this service.");
       } else {
-        alert(`فشل الحفظ: ${msg}`);
+        alert(`Save failed: ${msg}`);
       }
       console.error("[TextToArticle] save error:", e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Derived selected project
+  const selectedProject = useMemo(() => {
+    return projects.find((p) => String(p.id) === String(selectedProjectId)) || null;
+  }, [projects, selectedProjectId]);
+
+  // Save to selected project's articles table
+  const saveToProject = async () => {
+    if (!user) return alert("Please login.");
+    if (!selectedProject) return alert("Select a project first.");
+    if (!articleText) return alert("Generate the article first.");
+    if (!articleTextAr) return alert("Generate the Arabic version first.");
+    try {
+      setSaving(true);
+      await ensureToolExists();
+      // Gate: must purchase before sending to project
+      if (!purchasedThisRun) {
+        // compute ordinal and friendly URL without uploading a site page
+        const { count } = await supabase
+          .from("tool_instances")
+          .select("id", { count: "exact" })
+          .eq("client_id", user.id)
+          .eq("tool_id", toolId)
+          .range(0, 0);
+        if (typeof count === "number") setOrdinal((count || 0) + 1);
+        const ordForPath = Number.isFinite(ordinal) && ordinal > 0 ? ordinal : Math.floor(Date.now());
+        const friendlyUrl = friendly(username, ordForPath);
+        const { error: purchaseErr } = await supabase.rpc("purchase_tool_instance", {
+          p_client_id: user.id,
+          p_tool_id: toolId,
+          p_price: PRICE_EGP,
+          p_site_url: friendlyUrl,
+          p_source_image_url: "",
+          p_title: title,
+        });
+        if (purchaseErr) throw purchaseErr;
+        setPurchasedThisRun(true);
+      }
+
+      const blogTable = clean(selectedProject.blog_tabel_name) || "articles";
+      const remote = createSupabaseClient(clean(selectedProject.supabase_url), clean(selectedProject.supabase_anon));
+      const { error } = await remote.from(blogTable).insert({
+        title_en: clean(titleEn || title),
+        title_ar: clean(titleAr),
+        content_en: clean(articleText),
+        content_ar: clean(articleTextAr),
+        image_url: null,
+        show_on_homepage: true,
+      });
+      if (error) throw error;
+      alert("Article sent to the selected project database.");
+    } catch (e) {
+      alert("Failed to save to project: " + (e.message || String(e)));
+      console.error("[TextToArticle] saveToProject error:", e);
     } finally {
       setSaving(false);
     }
@@ -343,8 +499,8 @@ export default function Tool_TextToArticle() {
       <Sidebar />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">نص إلى مقال</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">السعر: {PRICE_EGP} EGP • أدخل نصًا أو رابطًا واختر الأسلوب واللهجة وعدد الفقرات، وسيولّد Gemini المقال مع كلمات SEO.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Text to Article</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Price: {PRICE_EGP} EGP • Paste text or a URL, choose style and paragraphs, and generate a clean English article with helpful SEO keywords.</p>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -353,37 +509,39 @@ export default function Tool_TextToArticle() {
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Type className="h-4 w-4" /> العنوان</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Type className="h-4 w-4" /> Title (EN)</label>
                   <input
                     className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="عنوان المقال"
+                    value={titleEn}
+                    onChange={(e) => { setTitleEn(e.target.value); setTitle(e.target.value); }}
+                    placeholder="Article title in English"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Languages className="h-4 w-4" /> اللهجة</label>
-                  <div className="mt-1 flex items-center gap-2">
-                    <button onClick={() => setDialect("فصحى")} className={`px-3 py-1.5 text-xs rounded ${dialect === "فصحى" ? "bg-indigo-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"}`}>فصحى</button>
-                    <button onClick={() => setDialect("مصري")} className={`px-3 py-1.5 text-xs rounded ${dialect === "مصري" ? "bg-indigo-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"}`}>مصري</button>
-                  </div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Languages className="h-4 w-4" /> Title (AR)</label>
+                  <input
+                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                    value={titleAr}
+                    onChange={(e) => setTitleAr(e.target.value)}
+                    placeholder="عنوان المقال بالعربية"
+                  />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Sparkles className="h-4 w-4" /> الأسلوب</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Sparkles className="h-4 w-4" /> Style</label>
                   <select
                     className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
                     value={style}
                     onChange={(e) => setStyle(e.target.value)}
                   >
-                    <option>رسمية</option>
-                    <option>مبدعة</option>
-                    <option>تقنية</option>
-                    <option>قصصية</option>
-                    <option>إعلانية</option>
+                    <option>Formal</option>
+                    <option>Creative</option>
+                    <option>Technical</option>
+                    <option>Narrative</option>
+                    <option>Promotional</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><ListChecks className="h-4 w-4" /> عدد الفقرات</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><ListChecks className="h-4 w-4" /> Paragraphs</label>
                   <input
                     type="number"
                     min={1}
@@ -396,35 +554,35 @@ export default function Tool_TextToArticle() {
               </div>
 
               <div className="mt-4">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Globe className="h-4 w-4" /> المصدر</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Globe className="h-4 w-4" /> Source</label>
                 <div className="mt-1 flex items-center gap-2">
-                  <button onClick={() => setSourceType("text")} className={`px-3 py-1.5 text-xs rounded ${sourceType === "text" ? "bg-indigo-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"}`}>نص</button>
-                  <button onClick={() => setSourceType("url")} className={`px-3 py-1.5 text-xs rounded ${sourceType === "url" ? "bg-indigo-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"}`}>رابط</button>
+                  <button onClick={() => setSourceType("text")} className={`px-3 py-1.5 text-xs rounded ${sourceType === "text" ? "bg-indigo-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"}`}>Text</button>
+                  <button onClick={() => setSourceType("url")} className={`px-3 py-1.5 text-xs rounded ${sourceType === "url" ? "bg-indigo-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"}`}>URL</button>
                 </div>
                 {sourceType === "text" ? (
                   <textarea
                     className="mt-2 w-full min-h-32 rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
                     value={sourceText}
                     onChange={(e) => setSourceText(e.target.value)}
-                    placeholder="ألصق النص هنا..."
+                    placeholder="Paste the source text here..."
                   />
                 ) : (
                   <input
                     className="mt-2 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
                     value={sourceUrl}
                     onChange={(e) => setSourceUrl(e.target.value)}
-                    placeholder="ضع رابط صفحة تحتوي على نص... (قد تمنع المواقع الجلب المباشر)"
+                    placeholder="Provide a page URL with text... (some sites block direct fetching)"
                   />
                 )}
               </div>
 
               <div className="mt-4">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">كلمات SEO (مفصولة بفاصلة)</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">SEO Keywords (comma-separated)</label>
                 <input
                   className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
                   value={keywordsInput}
                   onChange={(e) => setKeywordsInput(e.target.value)}
-                  placeholder="مثال: تسويق رقمي, تحسين محركات البحث, محتوى"
+                  placeholder="Example: digital marketing, SEO, content"
                 />
               </div>
 
@@ -434,34 +592,78 @@ export default function Tool_TextToArticle() {
                   disabled={generating}
                   className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded disabled:opacity-50"
                 >
-                  {generating ? "جاري التوليد..." : "اكتب المقال"}
+                  {generating ? "Generating..." : "Generate Article"}
                 </button>
                 <button
                   onClick={saveArticleInstance}
                   disabled={saving || !articleText}
                   className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded disabled:opacity-50"
                 >
-                  {saving ? "جاري الحفظ..." : "حفظ وشراء الخدمة"}
+                  {saving ? "Saving..." : "Save & Purchase"}
                 </button>
+                <button
+                  onClick={saveToProject}
+                  disabled={saving || !articleText || !selectedProjectId}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save to Project"}
+                </button>
+                {!purchasedThisRun && (
+                  <div className="text-xs text-gray-600 dark:text-gray-400">Payment required: You’ll be charged before sending to project.</div>
+                )}
               </div>
             </div>
 
             {/* Preview */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">المعاينة</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Preview (EN)</h3>
               {articleText ? (
                 <pre className="mt-2 whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{articleText}</pre>
               ) : (
-                <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">لا توجد معاينة بعد — قم بتوليد المقال.</div>
+                <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">No preview yet — generate the article.</div>
+              )}
+              <h3 className="mt-6 text-lg font-semibold text-gray-900 dark:text-gray-100">Preview (AR)</h3>
+              {articleTextAr ? (
+                <pre className="mt-2 whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{articleTextAr}</pre>
+              ) : (
+                <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Arabic preview will appear after generation.</div>
               )}
             </div>
           </div>
 
           {/* Right: Access & History */}
           <div className="space-y-6">
+            {/* Project selection */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">الوصول</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">أحدث رابط محفوظ</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Target Project</h2>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Select a project to save the article to its Supabase database.</p>
+              <select
+                className="mt-2 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+              >
+                <option value="">Select a project...</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name || p.id}</option>
+                ))}
+              </select>
+              {selectedProject && (
+                <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
+                  <div>Supabase URL: {selectedProject.supabase_url}</div>
+                  <div>Blog table: {selectedProject.blog_tabel_name || "articles"}</div>
+                </div>
+              )}
+              <button
+                onClick={saveToProject}
+                disabled={saving || !articleText || !selectedProjectId}
+                className="mt-3 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save to Project"}
+              </button>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Access</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Latest saved link</p>
               <a href={site.siteUrl} target="_blank" rel="noreferrer" className="text-blue-600 dark:text-blue-400 break-all">
                 {site.siteUrl}
               </a>
@@ -473,14 +675,14 @@ export default function Tool_TextToArticle() {
                   <div className="mt-2 w-40 h-40 bg-gray-200 dark:bg-gray-700 rounded" />
                 )}
                 <button onClick={() => window.open(qrUrl, "_blank")} disabled={!qrUrl} className="mt-3 px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded disabled:opacity-50">
-                  فتح QR
+                  Open QR
                 </button>
               </div>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Usage History</h2>
-              <p className="text-xs text-gray-600 dark:text-gray-400">عرض وإدارة الروابط السابقة.</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">View and manage previous links.</p>
               <div className="mt-3 space-y-3">
                 {history.map((row) => (
                   <div
@@ -538,7 +740,7 @@ export default function Tool_TextToArticle() {
                   </div>
                 ))}
                 {!history.length && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400">لا توجد سجلات بعد.</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">No records yet.</div>
                 )}
               </div>
             </div>

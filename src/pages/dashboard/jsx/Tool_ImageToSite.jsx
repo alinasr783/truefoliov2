@@ -2,18 +2,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import Sidebar from "./Sidebar";
 import { supabase } from "@/lib/supabase";
 import DropzoneUpload from "@/components/ui/DropzoneUpload";
-import { Copy, Download, Trash2, Link as LinkIcon } from "lucide-react";
+import { Copy, Download, Trash2, Link as LinkIcon, Image, QrCode, History, FileText } from "lucide-react";
 
 // Config
 const PRICE_EGP = 100;
-const IMAGE_BUCKET = "tool-images"; // create as Public bucket in Supabase Storage
-const SITE_BUCKET = "tool-sites"; // create as Public bucket in Supabase Storage
+const IMAGE_BUCKET = "tool-images";
+const SITE_BUCKET = "tool-sites";
 
 // Helper: generate simple website HTML using the uploaded image URL
 const cleanUrl = (u) => String(u || "").trim().replace(/`/g, "");
 
 const generateSiteHtml = ({ title, imageUrl, imageUrls = [], username }) => {
-  // Support single or multiple images; prefer provided array
   const urls = (imageUrls && imageUrls.length ? imageUrls : [imageUrl]).filter(Boolean).map(cleanUrl);
   const safeTitle = String(title || "").trim();
   return {
@@ -93,10 +92,10 @@ const generateSiteHtml = ({ title, imageUrl, imageUrls = [], username }) => {
 export default function Tool_ImageToSite() {
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState("guest");
-  const [items, setItems] = useState([]); // {file, dataUrl, title?, finalSiteUrl?}
+  const [items, setItems] = useState([]);
   const [ordinal, setOrdinal] = useState(1);
   const [saving, setSaving] = useState(false);
-  const [finalSiteUrl, setFinalSiteUrl] = useState(""); // last created
+  const [finalSiteUrl, setFinalSiteUrl] = useState("");
   const [history, setHistory] = useState([]);
   const [title, setTitle] = useState("My Auto Site");
   const toolId = "image-to-site";
@@ -108,7 +107,6 @@ export default function Tool_ImageToSite() {
         console.log("[ImageToSite] auth.getUser:", auth);
         if (auth?.user) {
           setUser(auth.user);
-          // Try to get username from client profile, fallback to email prefix
           const { data: clients, error: clientErr } = await supabase
             .from("client")
             .select("id, first_name, company_name, email, wallet")
@@ -117,7 +115,6 @@ export default function Tool_ImageToSite() {
           if (clientErr) console.error("[ImageToSite] client fetch error:", clientErr);
           console.log("[ImageToSite] client profile:", clients);
           const client = clients?.[0];
-          // Derive a safe username from existing fields (no username column in client)
           const rawName = client?.company_name || client?.first_name || (auth.user.email ? auth.user.email.split("@")[0] : "user");
           const uname = String(rawName || "user")
             .toLowerCase()
@@ -125,7 +122,6 @@ export default function Tool_ImageToSite() {
             .replace(/[^a-z0-9._-]/g, "-");
           setUsername(uname);
 
-          // Fetch current count to compute ordinal (per user per tool)
           const { count, error } = await supabase
             .from("tool_instances")
             .select("id", { count: "exact" })
@@ -138,7 +134,6 @@ export default function Tool_ImageToSite() {
           }
         }
       } catch (e) {
-        // non-fatal
         console.error("[ImageToSite] init error:", e);
       }
     };
@@ -156,7 +151,6 @@ export default function Tool_ImageToSite() {
     }
   };
 
-  // Preview combined site (friendly URL on current domain)
   const site = useMemo(() => {
     const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "https://truefolio.tech";
     const previewFriendlyUrl = `${origin}/${username}/${toolId}/${ordinal}`;
@@ -174,7 +168,6 @@ export default function Tool_ImageToSite() {
     }
   }, [site.siteUrl]);
 
-  // Helper: build QR URL for arbitrary link (used in history list)
   const makeQrUrl = (u) => {
     try {
       const target = encodeURIComponent(String(u || ""));
@@ -197,11 +190,9 @@ export default function Tool_ImageToSite() {
 
   const downloadQr = () => {
     if (!qrUrl) return;
-    // Open QR in a new tab to avoid cross-origin download aborts
     window.open(qrUrl, "_blank");
   };
 
-  // Download QR image for a given URL with graceful fallback
   const downloadQrFromUrl = async (url, filename = "qr.png") => {
     try {
       if (!url) return;
@@ -220,7 +211,6 @@ export default function Tool_ImageToSite() {
     }
   };
 
-  // Helpers
   const sanitizeFilename = (name) => name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "https://truefolio.tech";
   const friendly = (uname, ord) => `${origin}/${uname}/${toolId}/${ord}`;
@@ -258,7 +248,7 @@ export default function Tool_ImageToSite() {
     try {
       setSaving(true);
       console.log("[ImageToSite] saveCombined start", { user, username, toolId, ordinal, count: items.length });
-      // Refresh ordinal to reduce collision risk
+      
       const { count, error: cntErr } = await supabase
         .from("tool_instances")
         .select("id", { count: "exact" })
@@ -269,11 +259,9 @@ export default function Tool_ImageToSite() {
         setOrdinal((count || 0) + 1);
       }
 
-      // Use a unique fallback ordinal if RLS prevents counting
       const ordForPath = Number.isFinite(ordinal) && ordinal > 0 ? ordinal : Math.floor(Date.now());
       console.log("[ImageToSite] ordinals:", { ordinal_state: ordinal, count, ordForPath });
 
-      // Upload all images and collect public URLs
       const imagePublicUrls = [];
       for (const item of items) {
         const safeName = sanitizeFilename(item.file.name || `img_${Date.now()}.png`);
@@ -307,7 +295,6 @@ export default function Tool_ImageToSite() {
         throw err;
       }
 
-      // Atomic wallet check + deduction + instance + transaction
       console.log("[ImageToSite] calling RPC purchase_tool_instance", {
         p_client_id: user.id,
         p_tool_id: toolId,
@@ -327,7 +314,7 @@ export default function Tool_ImageToSite() {
       console.log("[ImageToSite] RPC result:", { purchase, purchaseErr });
       if (purchaseErr) throw purchaseErr;
 
-      setFinalSiteUrl(friendlyUrl); // last created
+      setFinalSiteUrl(friendlyUrl);
       setItems((prev) => prev.map((it) => ({ ...it, finalSiteUrl: friendlyUrl })));
       if (purchase?.ordinal_id) setOrdinal(purchase.ordinal_id);
       alert("Site created successfully and charged once. QR is ready.");
@@ -380,75 +367,109 @@ export default function Tool_ImageToSite() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Image to Site</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Price: {PRICE_EGP} EGP • Upload multiple images, generate one site, and get a QR code.</p>
+      <div className="max-w-7xl mx-auto px-4 py-8 ml-10">
+        {/* Header */}
+        <div className="text-center space-y-2 mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">Image to Website</h1>
+          <p className="text-gray-600 text-lg">Transform your images into a beautiful stacked website</p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
+            <span className="text-sm font-medium text-gray-700">Price:</span>
+            <span className="text-lg font-bold text-gray-900">{PRICE_EGP} EGP</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Left: Upload & Items */}
           <div className="xl:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Upload Images</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Choose one or more images. They will be stacked in the final site.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={downloadCombinedHtml}
-                    disabled={!items.length}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-50"
-                  >
-                    Download Combined HTML
-                  </button>
-                  <button
-                    onClick={saveCombinedInstance}
-                    disabled={saving || !items.length}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded disabled:opacity-50"
-                  >
-                    {saving ? "Creating..." : "Create Combined Site"}
-                  </button>
+            {/* Upload Section */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Image className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Upload Images</h2>
+                    <p className="text-sm text-gray-600">Choose one or more images for your website</p>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Site Title</label>
+
+              {/* Site Title Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Website Title</label>
                 <input
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 mb-4 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="My Auto Site"
+                  placeholder="My Awesome Website"
                 />
-                <DropzoneUpload
-                  multiple
-                  accept="image/*"
-                  value={items}
-                  onFilesChange={handleFilesFromDropzone}
-                  className="mt-2"
-                  label="Drag & drop images here"
-                  sublabel="or click to browse"
-                />
+              </div>
+
+              {/* Dropzone */}
+              <DropzoneUpload
+                multiple
+                accept="image/*"
+                value={items}
+                onFilesChange={handleFilesFromDropzone}
+                className="mt-2"
+                label="Drag & drop images here"
+                sublabel="or click to browse"
+              />
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={downloadCombinedHtml}
+                  disabled={!items.length}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl disabled:opacity-50 transition-colors"
+                >
+                  <FileText className="w-4 h-4" />
+                  Download HTML
+                </button>
+                <button
+                  onClick={saveCombinedInstance}
+                  disabled={saving || !items.length}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-xl disabled:opacity-50 transition-colors"
+                >
+                  {saving ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Creating Site...
+                    </>
+                  ) : (
+                    <>
+                      <Image className="w-4 h-4" />
+                      Create Website
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
-            {/* Items list */}
+            {/* Image Previews */}
             <div className="space-y-4">
               {items.map((item, idx) => (
-                <div key={idx} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div key={idx} className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="md:col-span-2">
-                      <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                        <img src={item.dataUrl} alt="Preview" className="w-full" />
+                      <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                        <img src={item.dataUrl} alt="Preview" className="w-full h-48 object-cover" />
                       </div>
                     </div>
                     <div className="space-y-3">
                       {item.finalSiteUrl && (
-                        <div className="mt-1">
-                          <p className="text-xs text-gray-600 dark:text-gray-400">Link:</p>
-                          <a href={item.finalSiteUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 dark:text-blue-400 break-all">
+                        <div>
+                          <p className="text-sm font-medium text-gray-700 mb-1">Live Website:</p>
+                          <a 
+                            href={item.finalSiteUrl} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="text-sm text-blue-600 hover:text-blue-700 break-all inline-flex items-center gap-1"
+                          >
+                            <LinkIcon className="w-4 h-4" />
                             {item.finalSiteUrl}
                           </a>
                         </div>
@@ -458,8 +479,10 @@ export default function Tool_ImageToSite() {
                 </div>
               ))}
               {!items.length && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                  No images yet — upload to get started.
+                <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center">
+                  <Image className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No images uploaded yet</h3>
+                  <p className="text-gray-600">Upload some images to create your website</p>
                 </div>
               )}
             </div>
@@ -467,93 +490,142 @@ export default function Tool_ImageToSite() {
 
           {/* Right: Access & History */}
           <div className="space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Access</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Latest generated URL</p>
-              <a href={site.siteUrl} target="_blank" rel="noreferrer" className="text-blue-600 dark:text-blue-400 break-all">
-                {site.siteUrl}
-              </a>
-              <div className="mt-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400">QR Code</p>
-                {qrUrl ? (
-                  <img src={qrUrl} alt="QR Code" className="mt-2 w-40 h-40 bg-white rounded" />
-                ) : (
-                  <div className="mt-2 w-40 h-40 bg-gray-200 dark:bg-gray-700 rounded" />
-                )}
-                <button onClick={downloadQr} disabled={!qrUrl} className="mt-3 px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded disabled:opacity-50">
-                  Open QR
-                </button>
+            {/* Current Site Access */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <QrCode className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Website Access</h2>
+                  <p className="text-sm text-gray-600">Your latest generated website</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Website URL</p>
+                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                    <LinkIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <a 
+                      href={site.siteUrl} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="text-blue-600 hover:text-blue-700 break-all text-sm flex-1"
+                    >
+                      {site.siteUrl}
+                    </a>
+                    <button 
+                      onClick={() => copyToClipboard(site.siteUrl)}
+                      className="p-1 text-gray-500 hover:text-gray-700"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">QR Code</p>
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 inline-block">
+                    {qrUrl ? (
+                      <img src={qrUrl} alt="QR Code" className="w-40 h-40" />
+                    ) : (
+                      <div className="w-40 h-40 bg-gray-100 rounded flex items-center justify-center">
+                        <QrCode className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <button 
+                    onClick={downloadQr} 
+                    disabled={!qrUrl}
+                    className="w-full mt-3 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl disabled:opacity-50"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download QR Code
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Usage History</h2>
-              <p className="text-xs text-gray-600 dark:text-gray-400">View and manage previously created links.</p>
-              <div className="mt-3 space-y-3">
+            {/* History Section */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <History className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">History</h2>
+                  <p className="text-sm text-gray-600">Your previously created websites</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
                 {history.map((row) => (
                   <div
                     key={row.id}
-                    className="group relative overflow-hidden rounded-xl border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-all"
+                    className="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all p-4"
                   >
-                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/40 via-emerald-500/40 to-sky-500/40" />
-                    <div className="p-3 sm:p-4 flex items-center gap-4">
+                    <div className="flex items-start gap-4">
                       <div className="flex-shrink-0">
                         <img
                           src={makeQrUrl(row.site_url)}
                           alt="QR"
-                          className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg bg-white dark:bg-gray-900 ring-1 ring-gray-200/60 dark:ring-gray-700 object-contain"
+                          className="h-16 w-16 rounded-lg bg-white border border-gray-200 object-contain"
                         />
                       </div>
                       <div className="min-w-0 flex-1">
                         {row.title && (
-                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                          <div className="text-sm font-semibold text-gray-900 truncate mb-1">
                             {row.title}
                           </div>
                         )}
-                        <div className="mt-0.5 flex items-center gap-2 min-w-0">
-                          <LinkIcon className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                        <div className="flex items-center gap-2 min-w-0 mb-2">
+                          <LinkIcon className="h-3 w-3 text-gray-500 flex-shrink-0" />
                           <a
                             href={row.site_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs text-blue-600 dark:text-blue-400 truncate max-w-[340px] sm:max-w-[420px]"
+                            className="text-xs text-blue-600 truncate"
                             title={row.site_url}
                           >
                             {row.site_url}
                           </a>
                         </div>
-                        <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500">
                           {new Date(row.created_at).toLocaleString()}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           onClick={() => copyToClipboard(row.site_url)}
-                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-300 dark:ring-indigo-900"
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="Copy URL"
                         >
-                          <Copy className="h-3.5 w-3.5" />
-                          Copy
+                          <Copy className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => downloadQrFromUrl(makeQrUrl(row.site_url), `qr-${row.id}.png`)}
-                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:ring-emerald-900"
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="Download QR"
                         >
-                          <Download className="h-3.5 w-3.5" />
-                          Download QR
+                          <Download className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => deleteInstance(row.id)}
-                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-rose-50 text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:ring-rose-900"
+                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
                 {!history.length && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400">No records yet.</div>
+                  <div className="text-center py-8">
+                    <History className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600">No websites created yet</p>
+                  </div>
                 )}
               </div>
             </div>

@@ -2,20 +2,20 @@ import React, { useEffect, useMemo, useState } from "react";
 import Sidebar from "./Sidebar";
 import { supabase } from "@/lib/supabase";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { Sparkles, Globe, Type, Languages, ListChecks, Link as LinkIcon, Copy, Download, Trash2 } from "lucide-react";
+import { Sparkles, Globe, Type, Languages, ListChecks, Link as LinkIcon, Copy, Download, Trash2, FileText, BookOpen, Send } from "lucide-react";
 
 // Pricing
 const PRICE_EGP = 50;
-const SITE_BUCKET = "tool-sites"; // Public bucket in Supabase Storage
+const SITE_BUCKET = "tool-sites";
 
-// Gemini API (user requested gemini-2.0-flash)
+// Gemini API
 const GEMINI_MODEL = "gemini-2.0-flash";
-const GEMINI_API_KEY = "AIzaSyBpknrp9hVYU6zgY86QIQedSl4NmjrPCj4"; // dev key (user will rotate in production)
+const GEMINI_API_KEY = "AIzaSyBpknrp9hVYU6zgY86QIQedSl4NmjrPCj4";
 
 const clean = (s) => String(s || "").trim();
 
 // Build prompt for Gemini
-function buildPrompt({ sourceText, sourceUrl, style, dialect, paragraphs, keywords }) {
+function buildPrompt({ sourceText, sourceUrl, style, englishTone, paragraphs, keywords }) {
   const srcText = clean(sourceText);
   const srcUrl = clean(sourceUrl);
   const kw = Array.isArray(keywords)
@@ -27,10 +27,13 @@ function buildPrompt({ sourceText, sourceUrl, style, dialect, paragraphs, keywor
     : (srcUrl
         ? `Write an article inspired by the page at: ${srcUrl}. If direct fetching is blocked by the browser, use the general topic of the URL without verbatim copying.`
         : `Write an article on a suitable general topic.`);
+  const enHint = String(englishTone || "Formal").toLowerCase().includes("american")
+    ? "American English, conversational tone"
+    : "Formal English, clear and professional";
   return [
     sourceBlock,
-    `Requirements: Style: ${style}. Paragraphs: ${paragraphs}. ${kwStr}`,
-    `Formatting: Divide into clear paragraphs of 3–6 sentences each. Use simple headings if helpful. Integrate the keywords naturally without stuffing. Return plain text only (no Markdown). Language: English.`,
+    `Requirements: Style: ${style}. Tone: ${enHint}. Paragraphs: ${paragraphs}. ${kwStr}`,
+    `Formatting: Divide into clear paragraphs of 3–6 sentences each. Use simple headings if helpful. Integrate the keywords naturally without stuffing. Return plain text only (no Markdown). Language: English (use the specified tone).`,
   ].join("\n\n");
 }
 
@@ -95,7 +98,6 @@ async function generateTitles(articleEn) {
     const obj = JSON.parse(raw);
     return { en: clean(obj.title_en), ar: clean(obj.title_ar) };
   } catch {
-    // Fallback: try to parse lines
     const lines = raw.split(/\r?\n/).map((l) => clean(l)).filter(Boolean);
     const en = lines.find((l) => /english|en/i.test(l)) || lines[0] || "Untitled";
     const ar = lines.find((l) => /arabic|ar/i.test(l)) || lines[1] || "بدون عنوان";
@@ -160,11 +162,12 @@ export default function Tool_TextToArticle() {
   const [title, setTitle] = useState("New Article");
   const [titleEn, setTitleEn] = useState("");
   const [titleAr, setTitleAr] = useState("");
-  const [sourceType, setSourceType] = useState("text"); // 'text' | 'url'
+  const [sourceType, setSourceType] = useState("text");
   const [sourceText, setSourceText] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [style, setStyle] = useState("Formal");
   const [dialect, setDialect] = useState("فصحى");
+  const [englishTone, setEnglishTone] = useState("Formal");
   const [paragraphs, setParagraphs] = useState(5);
   const [keywordsInput, setKeywordsInput] = useState("");
   const [articleText, setArticleText] = useState("");
@@ -200,7 +203,6 @@ export default function Tool_TextToArticle() {
             .range(0, 0);
           if (typeof count === "number") setOrdinal((count || 0) + 1);
 
-          // Load user projects
           const { data: projData, error: projErr } = await supabase
             .from("project")
             .select("id, name, supabase_url, supabase_anon, blog_tabel_name, client_id")
@@ -257,19 +259,18 @@ export default function Tool_TextToArticle() {
         sourceText,
         sourceUrl,
         style,
+        englishTone,
         paragraphs,
         keywords: keywordsInput,
       });
       const text = await callGemini(prompt);
       setArticleText(text);
-      // Arabic translation for convenience
       try {
         const ar = await translateToArabic(text, dialect);
         setArticleTextAr(ar);
       } catch (e) {
         console.warn("[TextToArticle] Arabic translation failed:", e);
       }
-      // Titles EN/AR
       try {
         const t = await generateTitles(text);
         setTitleEn(t.en || "Untitled");
@@ -301,7 +302,6 @@ export default function Tool_TextToArticle() {
     return pub.publicUrl;
   };
 
-  // Ensure the tool record exists to satisfy FK constraints
   const ensureToolExists = async () => {
     try {
       const { data: existsData, error: existsErr } = await supabase
@@ -310,7 +310,6 @@ export default function Tool_TextToArticle() {
         .eq("tool_id", toolId)
         .limit(1);
       if (existsErr) {
-        // RLS may prevent reads; continue and try insert
         console.warn("[TextToArticle] Unable to check tools table:", existsErr.message || existsErr);
       }
       const exists = Array.isArray(existsData) && existsData.length > 0;
@@ -322,7 +321,6 @@ export default function Tool_TextToArticle() {
           is_active: true,
         });
         if (insertErr) {
-          // If insert fails due to RLS, instructive log only; purchase may still fail
           console.warn("[TextToArticle] Tool insert failed (likely RLS):", insertErr.message || insertErr);
         }
       }
@@ -352,7 +350,6 @@ export default function Tool_TextToArticle() {
       const sitePublicUrl = await uploadToStorage(SITE_BUCKET, sitePath, htmlBlob, "text/html; charset=utf-8");
       const friendlyUrl = friendly(username, ordForPath);
 
-      // Charge wallet + record instance
       const { data: purchase, error: purchaseErr } = await supabase.rpc("purchase_tool_instance", {
         p_client_id: user.id,
         p_tool_id: toolId,
@@ -380,12 +377,10 @@ export default function Tool_TextToArticle() {
     }
   };
 
-  // Derived selected project
   const selectedProject = useMemo(() => {
     return projects.find((p) => String(p.id) === String(selectedProjectId)) || null;
   }, [projects, selectedProjectId]);
 
-  // Save to selected project's articles table
   const saveToProject = async () => {
     if (!user) return alert("Please login.");
     if (!selectedProject) return alert("Select a project first.");
@@ -394,9 +389,7 @@ export default function Tool_TextToArticle() {
     try {
       setSaving(true);
       await ensureToolExists();
-      // Gate: must purchase before sending to project
       if (!purchasedThisRun) {
-        // compute ordinal and friendly URL without uploading a site page
         const { count } = await supabase
           .from("tool_instances")
           .select("id", { count: "exact" })
@@ -471,14 +464,14 @@ export default function Tool_TextToArticle() {
   }, [user]);
 
   const copyToClipboard = async (text) => {
-    try { await navigator.clipboard.writeText(text); alert("تم نسخ الرابط"); } catch {}
+    try { await navigator.clipboard.writeText(text); alert("Link copied"); } catch {}
   };
 
   const deleteInstance = async (id) => {
-    if (!confirm("هل تريد حذف هذا السجل؟")) return;
+    if (!confirm("Do you want to delete this record?")) return;
     const { error } = await supabase.from("tool_instances").delete().eq("id", id).eq("client_id", user.id);
     if (error) {
-      alert("فشل الحذف: " + (error.message || ""));
+      alert("Failed to delete: " + (error.message || ""));
       return;
     }
     await loadHistory();
@@ -495,41 +488,71 @@ export default function Tool_TextToArticle() {
   }, [site.siteUrl]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Text to Article</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Price: {PRICE_EGP} EGP • Paste text or a URL, choose style and paragraphs, and generate a clean English article with helpful SEO keywords.</p>
+      <div className="max-w-7xl mx-auto px-4 py-8 ml-10">
+        {/* Header */}
+        <div className="text-center space-y-2 mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">Text to Article</h1>
+          <p className="text-gray-600 text-lg">Transform text or URLs into professional articles with AI</p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
+            <span className="text-sm font-medium text-gray-700">Price:</span>
+            <span className="text-lg font-bold text-gray-900">{PRICE_EGP} EGP</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Left: Inputs & Generation */}
           <div className="xl:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Main Input Section */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Type className="h-4 w-4" /> Title (EN)</label>
+                  <h2 className="text-xl font-bold text-gray-900">Article Settings</h2>
+                  <p className="text-sm text-gray-600">Configure your article preferences</p>
+                </div>
+              </div>
+
+              {/* Title Inputs */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Type className="w-4 h-4" />
+                    English Title
+                  </label>
                   <input
-                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                    className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={titleEn}
                     onChange={(e) => { setTitleEn(e.target.value); setTitle(e.target.value); }}
                     placeholder="Article title in English"
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Languages className="h-4 w-4" /> Title (AR)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Languages className="w-4 h-4" />
+                    Arabic Title
+                  </label>
                   <input
-                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                    className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={titleAr}
                     onChange={(e) => setTitleAr(e.target.value)}
                     placeholder="عنوان المقال بالعربية"
                   />
                 </div>
+              </div>
+
+              {/* Style and Paragraphs */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Sparkles className="h-4 w-4" /> Style</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Writing Style
+                  </label>
                   <select
-                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                    className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={style}
                     onChange={(e) => setStyle(e.target.value)}
                   >
@@ -541,104 +564,201 @@ export default function Tool_TextToArticle() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><ListChecks className="h-4 w-4" /> Paragraphs</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <ListChecks className="w-4 h-4" />
+                    Paragraphs
+                  </label>
                   <input
                     type="number"
                     min={1}
                     max={10}
-                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                    className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={paragraphs}
                     onChange={(e) => setParagraphs(Math.max(1, Math.min(10, Number(e.target.value) || 5)))}
                   />
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2"><Globe className="h-4 w-4" /> Source</label>
-                <div className="mt-1 flex items-center gap-2">
-                  <button onClick={() => setSourceType("text")} className={`px-3 py-1.5 text-xs rounded ${sourceType === "text" ? "bg-indigo-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"}`}>Text</button>
-                  <button onClick={() => setSourceType("url")} className={`px-3 py-1.5 text-xs rounded ${sourceType === "url" ? "bg-indigo-600 text-white" : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"}`}>URL</button>
+              {/* Language Options */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Languages className="w-4 h-4" />
+                    English Tone
+                  </label>
+                  <select
+                    className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+                    value={englishTone}
+                    onChange={(e) => setEnglishTone(e.target.value)}
+                  >
+                    <option value="Formal">Formal English</option>
+                    <option value="American (Colloquial)">American English (colloquial)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Languages className="w-4 h-4" />
+                    اللهجة العربية
+                  </label>
+                  <select
+                    className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
+                    value={dialect}
+                    onChange={(e) => setDialect(e.target.value)}
+                  >
+                    <option value="فصحى">الفصحى (Modern Standard Arabic)</option>
+                    <option value="عامية مصرية">العامية المصرية (Egyptian Arabic)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Source Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  Source Material
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <button 
+                    onClick={() => setSourceType("text")} 
+                    className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors ${
+                      sourceType === "text" 
+                        ? "bg-gray-800 text-white" 
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Text
+                  </button>
+                  <button 
+                    onClick={() => setSourceType("url")} 
+                    className={`px-4 py-2 text-sm font-medium rounded-xl transition-colors ${
+                      sourceType === "url" 
+                        ? "bg-gray-800 text-white" 
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    URL
+                  </button>
                 </div>
                 {sourceType === "text" ? (
                   <textarea
-                    className="mt-2 w-full min-h-32 rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                    className="w-full min-h-32 rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={sourceText}
                     onChange={(e) => setSourceText(e.target.value)}
-                    placeholder="Paste the source text here..."
+                    placeholder="Paste your source text here..."
                   />
                 ) : (
                   <input
-                    className="mt-2 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                    className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={sourceUrl}
                     onChange={(e) => setSourceUrl(e.target.value)}
-                    placeholder="Provide a page URL with text... (some sites block direct fetching)"
+                    placeholder="Enter a URL to extract content from..."
                   />
                 )}
               </div>
 
-              <div className="mt-4">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">SEO Keywords (comma-separated)</label>
+              {/* Keywords */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SEO Keywords (comma-separated)
+                </label>
                 <input
-                  className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                   value={keywordsInput}
                   onChange={(e) => setKeywordsInput(e.target.value)}
-                  placeholder="Example: digital marketing, SEO, content"
+                  placeholder="Example: digital marketing, SEO, content strategy"
                 />
               </div>
 
-              <div className="mt-4 flex items-center gap-2">
+              {/* Action Buttons */}
+              <div className="flex gap-3">
                 <button
                   onClick={generateArticle}
                   disabled={generating}
-                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded disabled:opacity-50"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-xl disabled:opacity-50 transition-colors"
                 >
-                  {generating ? "Generating..." : "Generate Article"}
+                  {generating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Generate Article
+                    </>
+                  )}
                 </button>
                 <button
                   onClick={saveArticleInstance}
                   disabled={saving || !articleText}
-                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded disabled:opacity-50"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl disabled:opacity-50 transition-colors"
                 >
-                  {saving ? "Saving..." : "Save & Purchase"}
+                  <FileText className="w-4 h-4" />
+                  Save Article
                 </button>
-                <button
-                  onClick={saveToProject}
-                  disabled={saving || !articleText || !selectedProjectId}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-50"
-                >
-                  {saving ? "Saving..." : "Save to Project"}
-                </button>
-                {!purchasedThisRun && (
-                  <div className="text-xs text-gray-600 dark:text-gray-400">Payment required: You’ll be charged before sending to project.</div>
-                )}
               </div>
             </div>
 
-            {/* Preview */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Preview (EN)</h3>
-              {articleText ? (
-                <pre className="mt-2 whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{articleText}</pre>
-              ) : (
-                <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">No preview yet — generate the article.</div>
-              )}
-              <h3 className="mt-6 text-lg font-semibold text-gray-900 dark:text-gray-100">Preview (AR)</h3>
-              {articleTextAr ? (
-                <pre className="mt-2 whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">{articleTextAr}</pre>
-              ) : (
-                <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">Arabic preview will appear after generation.</div>
-              )}
+            {/* Article Previews */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <BookOpen className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Article Preview</h2>
+                  <p className="text-sm text-gray-600">Generated content in both languages</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">English Version</h3>
+                  {articleText ? (
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans">{articleText}</pre>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-xl p-8 text-center border border-dashed border-gray-300">
+                      <BookOpen className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600">Generate an article to see the preview</p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Arabic Version</h3>
+                  {articleTextAr ? (
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                      <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans" dir="rtl">{articleTextAr}</pre>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-xl p-8 text-center border border-dashed border-gray-300">
+                      <Languages className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600">Arabic translation will appear here</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Right: Access & History */}
+          {/* Right: Project & History */}
           <div className="space-y-6">
-            {/* Project selection */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Target Project</h2>
-              <p className="text-xs text-gray-600 dark:text-gray-400">Select a project to save the article to its Supabase database.</p>
+            {/* Project Selection */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Send className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Save to Project</h2>
+                  <p className="text-sm text-gray-600">Send article to your project database</p>
+                </div>
+              </div>
+
               <select
-                className="mt-2 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 backdrop-blur text-gray-900 dark:text-gray-100 p-2 shadow-sm focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent mb-4"
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
               >
@@ -647,100 +767,166 @@ export default function Tool_TextToArticle() {
                   <option key={p.id} value={p.id}>{p.name || p.id}</option>
                 ))}
               </select>
+
               {selectedProject && (
-                <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
-                  <div>Supabase URL: {selectedProject.supabase_url}</div>
-                  <div>Blog table: {selectedProject.blog_tabel_name || "articles"}</div>
+                <div className="text-xs text-gray-600 bg-gray-50 rounded-lg p-3 mb-4">
+                  <div><strong>Supabase URL:</strong> {selectedProject.supabase_url}</div>
+                  <div><strong>Blog Table:</strong> {selectedProject.blog_tabel_name || "articles"}</div>
                 </div>
               )}
+
               <button
                 onClick={saveToProject}
                 disabled={saving || !articleText || !selectedProjectId}
-                className="mt-3 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl disabled:opacity-50 transition-colors"
               >
-                {saving ? "Saving..." : "Save to Project"}
+                <Send className="w-4 h-4" />
+                Save to Project
               </button>
+
+              {!purchasedThisRun && (
+                <p className="text-xs text-gray-600 mt-2 text-center">
+                  Payment required for project integration
+                </p>
+              )}
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Access</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Latest saved link</p>
-              <a href={site.siteUrl} target="_blank" rel="noreferrer" className="text-blue-600 dark:text-blue-400 break-all">
-                {site.siteUrl}
-              </a>
-              <div className="mt-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400">QR Code</p>
-                {qrUrl ? (
-                  <img src={qrUrl} alt="QR Code" className="mt-2 w-40 h-40 bg-white rounded" />
-                ) : (
-                  <div className="mt-2 w-40 h-40 bg-gray-200 dark:bg-gray-700 rounded" />
-                )}
-                <button onClick={() => window.open(qrUrl, "_blank")} disabled={!qrUrl} className="mt-3 px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded disabled:opacity-50">
-                  Open QR
-                </button>
+
+            {/* Current Article Access */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <LinkIcon className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Article Access</h2>
+                  <p className="text-sm text-gray-600">Your latest generated article</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Article URL</p>
+                  <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                    <LinkIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <a 
+                      href={site.siteUrl} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="text-blue-600 hover:text-blue-700 break-all text-sm flex-1"
+                    >
+                      {site.siteUrl}
+                    </a>
+                    <button 
+                      onClick={() => copyToClipboard(site.siteUrl)}
+                      className="p-1 text-gray-500 hover:text-gray-700"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">QR Code</p>
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 inline-block">
+                    {qrUrl ? (
+                      <img src={qrUrl} alt="QR Code" className="w-40 h-40" />
+                    ) : (
+                      <div className="w-40 h-40 bg-gray-100 rounded flex items-center justify-center">
+                        <LinkIcon className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <button 
+                    onClick={() => window.open(qrUrl, "_blank")} 
+                    disabled={!qrUrl}
+                    className="w-full mt-3 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl disabled:opacity-50"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download QR Code
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Usage History</h2>
-              <p className="text-xs text-gray-600 dark:text-gray-400">View and manage previous links.</p>
-              <div className="mt-3 space-y-3">
+            {/* History Section */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <BookOpen className="w-6 h-6 text-purple-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">History</h2>
+                  <p className="text-sm text-gray-600">Previously generated articles</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
                 {history.map((row) => (
                   <div
                     key={row.id}
-                    className="group relative overflow-hidden rounded-xl border border-gray-200/70 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md transition-all"
+                    className="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all p-4"
                   >
-                    <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/40 via-emerald-500/40 to-sky-500/40" />
-                    <div className="p-3 sm:p-4 flex items-center gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        <img
+                          src={makeQrUrl(row.site_url)}
+                          alt="QR"
+                          className="h-16 w-16 rounded-lg bg-white border border-gray-200 object-contain"
+                        />
+                      </div>
                       <div className="min-w-0 flex-1">
                         {row.title && (
-                          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                          <div className="text-sm font-semibold text-gray-900 truncate mb-1">
                             {row.title}
                           </div>
                         )}
-                        <div className="mt-0.5 flex items-center gap-2 min-w-0">
-                          <LinkIcon className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                        <div className="flex items-center gap-2 min-w-0 mb-2">
+                          <LinkIcon className="h-3 w-3 text-gray-500 flex-shrink-0" />
                           <a
                             href={row.site_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs text-blue-600 dark:text-blue-400 truncate max-w-[340px] sm:max-w-[420px]"
+                            className="text-xs text-blue-600 truncate"
                             title={row.site_url}
                           >
                             {row.site_url}
                           </a>
                         </div>
-                        <div className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500">
                           {new Date(row.created_at).toLocaleString()}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           onClick={() => copyToClipboard(row.site_url)}
-                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-300 dark:ring-indigo-900"
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="Copy URL"
                         >
-                          <Copy className="h-3.5 w-3.5" />
-                          Copy
+                          <Copy className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => downloadQrFromUrl(makeQrUrl(row.site_url), `qr-${row.id}.png`)}
-                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:ring-emerald-900"
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="Download QR"
                         >
-                          <Download className="h-3.5 w-3.5" />
-                          Download QR
+                          <Download className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => deleteInstance(row.id)}
-                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-rose-50 text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:ring-rose-900"
+                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
                 {!history.length && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400">No records yet.</div>
+                  <div className="text-center py-8">
+                    <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600">No articles generated yet</p>
+                  </div>
                 )}
               </div>
             </div>

@@ -20,6 +20,11 @@ import Feedback from "./pages/dashboard/jsx/Feedback"
 import ToolsPage from "./pages/dashboard/jsx/Tools"
 import Tool_ImageToSite from "./pages/dashboard/jsx/Tool_ImageToSite"
 import Tool_TextToArticle from "./pages/dashboard/jsx/Tool_TextToArticle"
+import Tool_QRCodeGenerator from "./pages/dashboard/jsx/Tool_QRCodeGenerator"
+import SettingsProfile from "./pages/dashboard/jsx/SettingsProfile"
+import SettingsIntegrations from "./pages/dashboard/jsx/SettingsIntegrations"
+import LibraryKnowledge from "./pages/dashboard/jsx/LibraryKnowledge"
+import Review from "./pages/dashboard/jsx/Review"
 import SiteViewer from "./pages/site/SiteViewer"
 import SiteViewerGeneric from "./pages/site/SiteViewerGeneric"
 import "./App.css"
@@ -45,14 +50,21 @@ function App() {
         <Route path="/dashboard/tools" element={<ToolsPage />} />
         <Route path="/dashboard/tools/image-to-site" element={<Tool_ImageToSite />} />
         <Route path="/dashboard/tools/text-to-article" element={<Tool_TextToArticle />} />
+        <Route path="/dashboard/tools/qr-code-generator" element={<Tool_QRCodeGenerator />} />
+        <Route path="/dashboard/tools/qr-generator" element={<Tool_QRCodeGenerator />} />
+        <Route path="/settings/profile" element={<SettingsProfile />} />
+        <Route path="/settings/integrations" element={<SettingsIntegrations />} />
         <Route path="/projects" element={<ProjectsManagementPage />} />
         <Route path="/project/:id" element={<ProjectDetails />} />
         <Route path="/billing" element={<BillingAndPayments />} />
         <Route path="/referral" element={<ReferralProgram />} />
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/library/knowledge" element={<LibraryKnowledge />} />
+        <Route path="/review" element={<Review />} />
         <Route path="/tools" element={<ToolsPage />} />
         <Route path="/tools/image-to-site" element={<Tool_ImageToSite />} />
         <Route path="/tools/text-to-article" element={<Tool_TextToArticle />} />
+        <Route path="/tools/qr-generator" element={<Tool_QRCodeGenerator />} />
         <Route path="/:username/image-to-site/:ordinal" element={<SiteViewer />} />
         <Route path="/:username/:toolId/:ordinal" element={<SiteViewerGeneric />} />
       </Routes>

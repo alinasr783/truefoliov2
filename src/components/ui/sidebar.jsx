@@ -291,7 +291,7 @@ export function SessionNavBar() {
                       className="hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm dark:text-white"
                     > */}
                       <Link
-                        to="/select-org"
+                        to="/signup"
                         className="flex items-center gap-2 w-full"
                       >
                         <Plus className="h-4 w-4" />
@@ -472,7 +472,7 @@ export function SessionNavBar() {
                   </motion.li>
                 </Link>
 
-                {/* Existing Settings Link */}
+                {/* Integrations Settings Link */}
                 <Link
                   to="/settings/integrations"
                   className="flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary dark:hover:bg-gray-800"
@@ -480,7 +480,7 @@ export function SessionNavBar() {
                   <Settings className="h-4 w-4 shrink-0" />
                   <motion.li variants={variants}>
                     {!isCollapsed && (
-                      <p className="ml-2 text-sm font-medium">Settings</p>
+                      <p className="ml-2 text-sm font-medium">Integrations</p>
                     )}
                   </motion.li>
                 </Link>

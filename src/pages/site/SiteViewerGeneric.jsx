@@ -12,8 +12,18 @@ export default function SiteViewerGeneric() {
     const load = async () => {
       try {
         const sitePath = `${username}/${toolId}/${ordinal}/index.html`;
-        const { data } = supabase.storage.from("tool-sites").getPublicUrl(sitePath);
-        const siteUrl = data?.publicUrl;
+        // Prefer a signed URL to avoid 400s if the bucket is private
+        let siteUrl = "";
+        try {
+          const { data: signed } = await supabase.storage
+            .from("tool-sites")
+            .createSignedUrl(sitePath, 60);
+          siteUrl = signed?.signedUrl || "";
+        } catch {}
+        if (!siteUrl) {
+          const { data: pub } = supabase.storage.from("tool-sites").getPublicUrl(sitePath);
+          siteUrl = pub?.publicUrl || "";
+        }
         if (!siteUrl) throw new Error("Site URL not found");
         const res = await fetch(siteUrl);
         if (!res.ok) throw new Error(`Failed to load site HTML (${res.status})`);
@@ -39,4 +49,3 @@ export default function SiteViewerGeneric() {
     />
   );
 }
-

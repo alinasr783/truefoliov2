@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
@@ -34,10 +33,13 @@ export default function ToolsPage() {
           .eq("is_active", true)
           .order("name", { ascending: true });
         if (error) throw error;
-        if (!cancelled) setTools(data?.length ? data : defaultTools);
+        const base = data?.length ? data : defaultTools;
+        const normalized = base.map((t) => ({ ...t, price: 0, currency: "", status: "Free" }));
+        if (!cancelled) setTools(normalized);
       } catch (e) {
         console.error("[Tools] fetch error:", e);
-        if (!cancelled) setTools(defaultTools);
+        const normalized = defaultTools.map((t) => ({ ...t, price: 0, currency: "", status: "Free" }));
+        if (!cancelled) setTools(normalized);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -53,7 +55,6 @@ export default function ToolsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Sidebar />
       <div className="max-w-6xl mx-auto px-4 py-8 ml-10">
         {/* Header */}
         <div className="text-center space-y-2 mb-8">
@@ -124,10 +125,10 @@ export default function ToolsPage() {
                   <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold text-gray-900">
-                        {tool.price}
+                        {tool.price === 0 ? "Free" : tool.price}
                       </span>
                       <span className="text-gray-600 font-medium">
-                        {tool.currency}
+                        {tool.price === 0 ? "" : tool.currency}
                       </span>
                     </div>
                     

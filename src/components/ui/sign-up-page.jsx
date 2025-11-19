@@ -20,16 +20,14 @@ export function SignupPage() {
     agreeToTerms: false,
   });
 
-  // التحقق من كود الإحالة في URL عند تحميل الصفحة
-  useEffect(() => {
-    const referralCode = searchParams.get("ref");
-    if (referralCode) {
-      setFormData((prev) => ({ ...prev, referralCode }));
-      checkReferralCode(referralCode);
-    }
-  }, [searchParams]);
-
-  // دالة للتحقق من صحة كود الإحالة
+  // Check referral code in URL on page load
+  // Function to validate referral code
+  // Validate when referral code changes
+  // Create auth account
+  // Get referred_by if referral code is valid
+  // Create user in client table
+  // Create an automatic referral code for the new user
+  // Redirect to email verification page
   const checkReferralCode = async (code) => {
     if (!code) {
       setReferralData(null);

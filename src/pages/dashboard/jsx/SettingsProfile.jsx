@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
-import { supabase } from "@/lib/supabase";
+import { supabase, getUserSafe } from "@/lib/supabase";
 import { User, Mail, Phone, MapPin, Building, FileText, Camera, Save, Shield, CreditCard } from "lucide-react";
 
 export default function SettingsProfile() {
@@ -37,7 +36,7 @@ export default function SettingsProfile() {
       try {
         setLoading(true);
         setError("");
-        const { data: auth, error: authErr } = await supabase.auth.getUser();
+        const { data: auth, error: authErr } = await getUserSafe();
         if (authErr) throw new Error(authErr.message);
         if (!auth?.user) throw new Error("Please login to manage your profile.");
         const authUser = auth.user;
@@ -194,7 +193,6 @@ export default function SettingsProfile() {
   if (loading) {
     return (
       <>
-        <Sidebar />
         <div className="min-h-screen bg-gray-50 p-4 sm:p-6 ml-10">
           <div className="max-w-6xl mx-auto">
             <div className="animate-pulse space-y-6">
@@ -230,7 +228,6 @@ export default function SettingsProfile() {
 
   return (
     <>
-      <Sidebar />
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 ml-10">
         <div className="max-w-6xl mx-auto">
           {/* Header */}

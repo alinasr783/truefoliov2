@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import Sidebar from "./Sidebar";
 import { supabase } from "@/lib/supabase";
 import {
   DollarSign,
@@ -489,7 +488,7 @@ const ReferralProgram = () => {
 
       // 🧩 Calculate stats
       const totalReferrals = referredMembersData?.length || 0;
-      const pendingEarnings = 0; // ممكن تضيف حساب المعاملات المعلقة لاحقًا
+      const pendingEarnings = 0; // You can add pending transactions calculation later
 
       setStats({
         walletBalance: userData?.wallet || 0,
@@ -534,7 +533,7 @@ const ReferralProgram = () => {
           (m) =>
             `${m.first_name} ${m.second_name}` === earning.referred_user_name
         );
-        // استخدم m.id بدل client_id لأن ده الـ UUID الحقيقي
+        // Use m.id instead of client_id because this is the actual UUID
         return earningMember?.id === memberId;
       })
       .reduce((total, earning) => total + earning.amount, 0);
@@ -546,9 +545,8 @@ const ReferralProgram = () => {
 
   if (loading && !userData) {
     return (
-      <>
-        <Sidebar />
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 ml-10">
+    <>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 ml-10">
           <div className="max-w-7xl mx-auto">
             <div className="animate-pulse">
               <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
@@ -578,7 +576,6 @@ const ReferralProgram = () => {
 
   return (
     <>
-      <Sidebar />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 ml-10">
         <div className="max-w-7xl mx-auto">
           {/* Header */}

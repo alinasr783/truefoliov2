@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import Sidebar from "./Sidebar";
-import { supabase } from "@/lib/supabase";
+import { supabase, getUserSafe } from "@/lib/supabase";
 import {
   Heart,
   MessageCircle,
@@ -305,7 +304,7 @@ const Comment = ({ comment, onLike, onReply, currentUser, depth = 0, parentAutho
 
   const checkLikeStatus = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getUserSafe();
       if (!user) return;
 
       const { data: likeData, error } = await supabase
@@ -323,7 +322,7 @@ const Comment = ({ comment, onLike, onReply, currentUser, depth = 0, parentAutho
 
   const handleLike = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await getUserSafe();
       if (!user) return;
 
       const newLikeState = !isLiked;
@@ -1350,7 +1349,6 @@ const CommunityFeedback = () => {
 
   return (
     <>
-      <Sidebar />
       <div className="min-h-screen bg-gray-50 py-8 px-4 mr-10">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}

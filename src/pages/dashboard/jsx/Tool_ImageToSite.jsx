@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import Sidebar from "./Sidebar";
-import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { supabase, getUserSafe } from "@/lib/supabase";
 import DropzoneUpload from "@/components/ui/DropzoneUpload";
-import { Copy, Download, Trash2, Link as LinkIcon, Image, QrCode, History, FileText } from "lucide-react";
+import { Copy, Download, Trash2, Link as LinkIcon, Image, QrCode, History, FileText, ArrowLeft } from "lucide-react";
 
 // Config
-const PRICE_EGP = 100;
+const PRICE_EGP = 0;
 const IMAGE_BUCKET = "tool-images";
 const SITE_BUCKET = "tool-sites";
 
@@ -89,7 +89,26 @@ const generateSiteHtml = ({ title, imageUrl, imageUrls = [], username }) => {
   };
 };
 
+const Popup = ({ open, title = "", message = "", onClose }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-xl w-[90%] max-w-md p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+        <p className="text-gray-700 mb-4 whitespace-pre-line">{message}</p>
+        <button
+          onClick={onClose}
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-xl"
+        >
+          Ok, Thanks
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function Tool_ImageToSite() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState("guest");
   const [items, setItems] = useState([]);
@@ -98,38 +117,41 @@ export default function Tool_ImageToSite() {
   const [finalSiteUrl, setFinalSiteUrl] = useState("");
   const [history, setHistory] = useState([]);
   const [title, setTitle] = useState("My Auto Site");
+  const [wallet, setWallet] = useState(0);
+  const [canUse, setCanUse] = useState(false);
+  const [popup, setPopup] = useState({ open: false, title: "", message: "" });
   const toolId = "image-to-site";
 
   useEffect(() => {
     const init = async () => {
       try {
-        const { data: auth } = await supabase.auth.getUser();
-        console.log("[ImageToSite] auth.getUser:", auth);
+        const { data: auth } = await getUserSafe();
         if (auth?.user) {
           setUser(auth.user);
-          const { data: clients, error: clientErr } = await supabase
+          const { data: clients } = await supabase
             .from("client")
             .select("id, first_name, company_name, email, wallet")
             .eq("id", auth.user.id)
             .limit(1);
-          if (clientErr) console.error("[ImageToSite] client fetch error:", clientErr);
-          console.log("[ImageToSite] client profile:", clients);
           const client = clients?.[0];
-          const rawName = client?.company_name || client?.first_name || (auth.user.email ? auth.user.email.split("@")[0] : "user");
+          const emailLocal = (auth.user.email || "").split("@")[0] || "user";
+          const rawName = emailLocal || client?.company_name || client?.first_name || "user";
           const uname = String(rawName || "user")
             .toLowerCase()
             .replace(/\s+/g, "-")
             .replace(/[^a-z0-9._-]/g, "-");
           setUsername(uname);
+          const currentWallet = Number(client?.wallet || 0);
+          setWallet(currentWallet);
+          setCanUse(true);
 
-          const { count, error } = await supabase
+          const { count } = await supabase
             .from("tool_instances")
             .select("id", { count: "exact" })
             .eq("client_id", auth.user.id)
             .eq("tool_id", toolId)
             .range(0, 0);
-          console.log("[ImageToSite] tool_instances count:", { count, error });
-          if (!error && typeof count === "number") {
+          if (typeof count === "number") {
             setOrdinal((count || 0) + 1);
           }
         }
@@ -153,10 +175,20 @@ export default function Tool_ImageToSite() {
 
   const site = useMemo(() => {
     const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "https://truefolio.tech";
-    const previewFriendlyUrl = `${origin}/${username}/${toolId}/${ordinal}`;
+    const previewFriendlyUrl = finalSiteUrl || "";
     const htmlObj = generateSiteHtml({ title, imageUrls: items.map(it => it.dataUrl), username });
     return { ...htmlObj, siteUrl: finalSiteUrl || previewFriendlyUrl };
-  }, [items, title, username, toolId, ordinal, finalSiteUrl]);
+  }, [items, title, username, toolId, finalSiteUrl]);
+
+  const downloadCombinedHtml = () => {
+    const htmlObj = generateSiteHtml({ title, imageUrls: items.map(it => it.dataUrl), username });
+    const blob = new Blob([htmlObj.html], { type: "text/html" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${toolId}-combined.html`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
 
   const qrUrl = useMemo(() => {
     try {
@@ -176,16 +208,6 @@ export default function Tool_ImageToSite() {
     } catch {
       return "";
     }
-  };
-
-  const downloadCombinedHtml = () => {
-    const htmlObj = generateSiteHtml({ title, imageUrls: items.map(it => it.dataUrl), username });
-    const blob = new Blob([htmlObj.html], { type: "text/html" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${toolId}-${ordinal}-combined.html`;
-    link.click();
-    URL.revokeObjectURL(link.href);
   };
 
   const downloadQr = () => {
@@ -213,14 +235,14 @@ export default function Tool_ImageToSite() {
 
   const sanitizeFilename = (name) => name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "https://truefolio.tech";
-  const friendly = (uname, ord) => `${origin}/${uname}/${toolId}/${ord}`;
+  const friendly = (uname, usageId) => `${origin}/${uname}/${toolId}/${usageId}`;
   const toFriendlyFromStorageUrl = (u) => {
     try {
-      const m = String(u || "").match(/tool-sites\/(.*?)\/image-to-site\/(\d+)\/index\.html/);
+      const m = String(u || "").match(/tool-sites\/(.*?)\/image-to-site\/([^/]+)\/index\.html/);
       if (!m) return u;
       const uname = m[1];
-      const ord = m[2];
-      return friendly(uname, ord);
+      const usageId = m[2];
+      return friendly(uname, usageId);
     } catch {
       return u;
     }
@@ -241,94 +263,121 @@ export default function Tool_ImageToSite() {
     return pub.publicUrl;
   };
 
+  // Ensure tools registry has this tool (helps RPCs that reference tools table)
+  const ensureToolExists = async () => {
+    try {
+      const { data: existsData, error: existsErr } = await supabase
+        .from("tools")
+        .select("tool_id")
+        .eq("tool_id", toolId)
+        .limit(1);
+      if (existsErr) {
+        console.warn("[ImageToSite] Unable to check tools table:", existsErr.message || existsErr);
+      }
+      const exists = Array.isArray(existsData) && existsData.length > 0;
+      if (!exists) {
+        const { error: insertErr } = await supabase.from("tools").insert({
+          tool_id: toolId,
+          name: "Image to Site",
+          price: PRICE_EGP,
+          is_active: true,
+        });
+        if (insertErr) {
+          console.warn("[ImageToSite] Tool insert failed (likely RLS):", insertErr.message || insertErr);
+        }
+      }
+    } catch (e) {
+      console.warn("[ImageToSite] ensureToolExists error:", e);
+    }
+  };
+
   const saveCombinedInstance = async () => {
-    if (!user) return alert("You need to be logged in.");
-    if (!items.length) return alert("Please upload at least one image.");
+    if (!user) return setPopup({ open: true, title: "Login Required", message: "Please sign in first." });
+    if (!items.length) return setPopup({ open: true, title: "No Images", message: "Please upload at least one image." });
+    
 
     try {
       setSaving(true);
-      console.log("[ImageToSite] saveCombined start", { user, username, toolId, ordinal, count: items.length });
+      await ensureToolExists();
       
-      const { count, error: cntErr } = await supabase
+
+      // 1) Purchase instance (server assigns usage_id) with minimal retry on unique violation
+      let purchaseErr, purchase;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { data: pData, error: pErr } = await supabase.rpc("purchase_tool_instance", {
+          p_client_id: user.id,
+          p_tool_id: toolId,
+          p_price: PRICE_EGP,
+          p_site_url: "",
+          p_source_image_url: "",
+          p_title: title,
+        });
+        purchase = pData; purchaseErr = pErr;
+        if (!purchaseErr) break;
+        const msg = (purchaseErr?.message || "").toLowerCase();
+        if (purchaseErr?.code === "23505" || msg.includes("usage_id") || msg.includes("unique")) {
+          console.warn("[ImageToSite] purchase retry due to unique usage_id:", purchaseErr);
+          await new Promise(r => setTimeout(r, 300));
+          continue;
+        }
+        break;
+      }
+      if (purchaseErr) throw purchaseErr;
+
+      // 2) Get latest usage_id
+      const { data: lastInst } = await supabase
         .from("tool_instances")
-        .select("id", { count: "exact" })
+        .select("id, usage_id")
         .eq("client_id", user.id)
         .eq("tool_id", toolId)
-        .range(0, 0);
-      if (!cntErr && typeof count === "number") {
-        setOrdinal((count || 0) + 1);
-      }
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const usageId = lastInst?.[0]?.usage_id;
+      if (!usageId) throw new Error("usage_id was not found for the created record.");
 
-      const ordForPath = Number.isFinite(ordinal) && ordinal > 0 ? ordinal : Math.floor(Date.now());
-      console.log("[ImageToSite] ordinals:", { ordinal_state: ordinal, count, ordForPath });
-
+      // 3) Upload images and HTML under usage_id path
       const imagePublicUrls = [];
       for (const item of items) {
         const safeName = sanitizeFilename(item.file.name || `img_${Date.now()}.png`);
-        const imagePath = `${username}/${toolId}/${ordForPath}/${safeName}`;
-        console.log("Uploading image to:", IMAGE_BUCKET, imagePath);
+        const imagePath = `${username}/${toolId}/${usageId}/${safeName}`;
         try {
           const url = await uploadToStorage(IMAGE_BUCKET, imagePath, item.file, item.file.type || "image/png");
           imagePublicUrls.push(url);
         } catch (err) {
           const msg = err?.message || String(err);
-          alert(`Failed to upload image: ${msg}`);
+          setPopup({ open: true, title: "Image Upload Failed", message: msg });
           throw err;
         }
       }
 
-      const sitePath = `${username}/${toolId}/${ordForPath}/index.html`;
-      const { data: sitePubData } = supabase.storage.from(SITE_BUCKET).getPublicUrl(sitePath);
-      const sitePublicUrl = cleanUrl(sitePubData.publicUrl);
-      const friendlyUrl = friendly(username, ordForPath);
-      console.log("[ImageToSite] site public URL (pre-upload):", sitePublicUrl);
-
+      const sitePath = `${username}/${toolId}/${usageId}/index.html`;
       const finalHtml = generateSiteHtml({ title, imageUrls: imagePublicUrls, username }).html;
       const htmlBlob = new Blob([finalHtml], { type: "text/html; charset=utf-8" });
-      console.log("Uploading site HTML to:", SITE_BUCKET, sitePath);
       try {
         await uploadToStorage(SITE_BUCKET, sitePath, htmlBlob, "text/html; charset=utf-8");
-        console.log("[ImageToSite] site HTML uploaded:", sitePublicUrl);
       } catch (err) {
         const msg = err?.message || String(err);
-        alert(`Failed to upload site page: ${msg}`);
+        setPopup({ open: true, title: "Page Upload Failed", message: msg });
         throw err;
       }
 
-      console.log("[ImageToSite] calling RPC purchase_tool_instance", {
-        p_client_id: user.id,
-        p_tool_id: toolId,
-        p_price: PRICE_EGP,
-        p_site_url: friendlyUrl,
-        p_source_image_url: imagePublicUrls[0] || "",
-        p_title: title,
-      });
-      const { data: purchase, error: purchaseErr } = await supabase.rpc("purchase_tool_instance", {
-        p_client_id: user.id,
-        p_tool_id: toolId,
-        p_price: PRICE_EGP,
-        p_site_url: friendlyUrl,
-        p_source_image_url: imagePublicUrls[0] || "",
-        p_title: title,
-      });
-      console.log("[ImageToSite] RPC result:", { purchase, purchaseErr });
-      if (purchaseErr) throw purchaseErr;
+      // 4) Update DB with friendly URL
+      const friendlyUrl = friendly(username, usageId);
+      await supabase
+        .from("tool_instances")
+        .update({ site_url: friendlyUrl })
+        .eq("id", lastInst?.[0]?.id);
 
       setFinalSiteUrl(friendlyUrl);
       setItems((prev) => prev.map((it) => ({ ...it, finalSiteUrl: friendlyUrl })));
-      if (purchase?.ordinal_id) setOrdinal(purchase.ordinal_id);
-      alert("Site created successfully and charged once. QR is ready.");
+      setPopup({ open: true, title: "Created", message: "The website has been created successfully." });
+      await loadHistory();
     } catch (e) {
       const msg = e?.message || String(e);
-      if (/insufficient/i.test(msg)) {
-        alert("Insufficient wallet balance for this tool.");
-      } else {
-        alert(`Failed to save: ${msg}`);
-      }
+      setPopup({ open: true, title: "Save Failed", message: msg });
       console.error("[ImageToSite] saveInstance error:", e);
     } finally {
       setSaving(false);
-      console.log("[ImageToSite] saveInstance end");
     }
   };
 
@@ -353,31 +402,46 @@ export default function Tool_ImageToSite() {
   }, [user]);
 
   const copyToClipboard = async (text) => {
-    try { await navigator.clipboard.writeText(text); alert("Link copied"); } catch {}
+    try { await navigator.clipboard.writeText(text); setPopup({ open: true, title: "Copied", message: "Link copied successfully." }); } catch {}
   };
 
   const deleteInstance = async (id) => {
+    if (!user) return setPopup({ open: true, title: "Login Required", message: "Please sign in first." });
     if (!confirm("Do you want to delete this record?")) return;
-    const { error } = await supabase.from("tool_instances").delete().eq("id", id).eq("client_id", user.id);
+    const { error } = await supabase
+      .from("tool_instances")
+      .delete()
+      .eq("id", id)
+      .eq("client_id", user.id)
+      .eq("tool_id", toolId);
     if (error) {
-      alert("Failed to delete: " + (error.message || ""));
+      console.error("[ImageToSite] delete error:", error);
+      setPopup({ open: true, title: "Delete Failed", message: error.message || "" });
       return;
     }
+    setPopup({ open: true, title: "Deleted", message: "The record has been deleted from history." });
     await loadHistory();
   };
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
-      <Sidebar />
+      
       <div className="max-w-7xl mx-auto px-4 py-8 ml-10">
         {/* Header */}
-        <div className="text-center space-y-2 mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Image to Website</h1>
-          <p className="text-gray-600 text-lg">Transform your images into a beautiful stacked website</p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
-            <span className="text-sm font-medium text-gray-700">Price:</span>
-            <span className="text-lg font-bold text-gray-900">{PRICE_EGP} EGP</span>
+        <div className="mb-8 flex items-start justify-between">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold text-gray-900 -mt-1">Image to Website</h1>
+            <p className="text-gray-600 text-lg">Transform your images into a beautiful stacked website</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
+              <span className="text-sm font-medium text-gray-700">Price:</span>
+              <span className="text-lg font-bold text-gray-900">{PRICE_EGP === 0 ? "Free" : `${PRICE_EGP} EGP`}</span>
+            </div>
           </div>
+          <button onClick={() => navigate('/dashboard/tools')} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Tools
+          </button>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -568,7 +632,7 @@ export default function Tool_ImageToSite() {
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0">
                         <img
-                          src={makeQrUrl(row.site_url)}
+                          src={makeQrUrl(row.site_url) || null}
                           alt="QR"
                           className="h-16 w-16 rounded-lg bg-white border border-gray-200 object-contain"
                         />
@@ -633,5 +697,7 @@ export default function Tool_ImageToSite() {
         </div>
       </div>
     </div>
+    <Popup open={popup.open} title={popup.title} message={popup.message} onClose={() => setPopup({ open: false, title: "", message: "" })} />
+    </>
   );
 }

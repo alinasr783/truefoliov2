@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
 export default function SiteViewerGeneric() {
-  const { username, toolId, ordinal } = useParams();
+  const { username, toolId, usageId } = useParams();
   const [html, setHtml] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,7 +11,7 @@ export default function SiteViewerGeneric() {
   useEffect(() => {
     const load = async () => {
       try {
-        const sitePath = `${username}/${toolId}/${ordinal}/index.html`;
+        const sitePath = `${username}/${toolId}/${usageId}/index.html`;
         // Prefer a signed URL to avoid 400s if the bucket is private
         let siteUrl = "";
         try {
@@ -36,7 +36,7 @@ export default function SiteViewerGeneric() {
       }
     };
     load();
-  }, [username, toolId, ordinal]);
+  }, [username, toolId, usageId]);
 
   if (loading) return <div style={{padding:20, color:'#555'}}>Loading site...</div>;
   if (error) return <div style={{padding:20, color:'#b91c1c'}}>Error: {error}</div>;

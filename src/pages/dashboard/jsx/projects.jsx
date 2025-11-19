@@ -1,9 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom"
-import Sidebar from "./Sidebar";
 import "../css/projects.css";
-import { supabase } from '@/lib/supabase'; // تعديل المسار حسب مكان ملف السوبابيس
+import { supabase, getUserSafe } from '@/lib/supabase';
 import {
   Search,
   Plus,
@@ -130,7 +129,7 @@ const ProgressBar = ({ progress }) => {
 };
 
 // Project card component
-const ProjectCard = ({ project, onEdit, onDelete, onView }) => {
+const ProjectCard = React.memo(({ project, onEdit, onDelete, onView, onPrefetch }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
@@ -157,6 +156,7 @@ const ProjectCard = ({ project, onEdit, onDelete, onView }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
+      onMouseEnter={() => onPrefetch && onPrefetch(project.id)}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -219,6 +219,10 @@ const ProjectCard = ({ project, onEdit, onDelete, onView }) => {
               src={client.avatar_url}
               alt={client.company_name || `${client.first_name} ${client.second_name}`}
               className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800"
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              fetchpriority="low"
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 border-2 border-white dark:border-gray-800 flex items-center justify-center">
@@ -253,7 +257,7 @@ const ProjectCard = ({ project, onEdit, onDelete, onView }) => {
       )}
     </motion.div>
   );
-};
+});
 
 
 // Main component
@@ -261,6 +265,9 @@ const ProjectManagement = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const pageSize = 9;
 
   const [filters, setFilters] = useState({
     status: "all",
@@ -270,23 +277,48 @@ const ProjectManagement = () => {
   const [selectedProject, setSelectedProject] = useState(null);
 
   // Fetch projects from Supabase
-  const fetchProjects = useCallback(async () => {
+  const fetchProjects = useCallback(async (p = page) => {
     try {
-      setLoading(true);
-
       // 🔹 Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await getUserSafe();
       if (userError) throw userError;
 
+      const cacheKey = `projects_cache_user_${user.id}_p_${p}_s_${pageSize}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.ts && Date.now() - parsed.ts < 5 * 60 * 1000 && Array.isArray(parsed.data)) {
+          setProjects(parsed.data);
+          setLoading(false);
+          setTotal(parsed.total || parsed.data.length);
+        }
+      } else {
+        setLoading(true);
+      }
+
       // 🔹 Fetch only this user's projects
-      const { data: projectsData, error: projectsError } = await supabase
+      const from = p * pageSize;
+      const to = from + pageSize - 1;
+      const { data: projectsData, error: projectsError, count } = await supabase
         .from('project')
         .select(`
-          *,
-          client:client_id (*)
-        `)
-        .eq('client_id', user.id) // ← الفلترة هنا حسب المستخدم الحالي
+          id, name, des, type, status, progress, start_at, end_at, logos, technologies, total_price, live_link,
+          client:client_id (company_name, first_name, second_name, avatar_url)
+        `, { count: 'exact' })
+        .eq('client_id', user.id) // Filter by the current user
         .order('created_at', { ascending: false });
+      
+      if (from >= 0 && to >= from) {
+        const ranged = await supabase
+          .from('project')
+          .select(`id, name, des, type, status, progress, start_at, end_at, logos, technologies, total_price, live_link,
+          client:client_id (company_name, first_name, second_name, avatar_url)`)
+          .eq('client_id', user.id)
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        if (ranged.error) throw ranged.error;
+        projectsData.splice(0, projectsData.length, ...ranged.data);
+      }
 
       if (projectsError) throw projectsError;
 
@@ -313,29 +345,33 @@ const ProjectManagement = () => {
       }));
 
       setProjects(transformedProjects);
+      setTotal(typeof count === 'number' ? count : transformedProjects.length);
+      sessionStorage.setItem(cacheKey, JSON.stringify({ data: transformedProjects, total: typeof count === 'number' ? count : transformedProjects.length, ts: Date.now() }));
     } catch (err) {
       console.error('Error fetching projects:', err);
       setError('Failed to load projects');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    fetchProjects(page);
+  }, [fetchProjects, page]);
 
-  const filteredProjects = projects.filter((project) => {
-    const matchesStatus =
-      filters.status === "all" || project.status === filters.status;
-    const matchesType = filters.type === "all" || project.type === filters.type;
-    const matchesSearch =
-      project.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      project.description?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      project.client?.company_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      project.client?.first_name?.toLowerCase().includes(filters.search.toLowerCase());
-    return matchesStatus && matchesType && matchesSearch;
-  });
+  const filteredProjects = useMemo(() => {
+    const q = filters.search.toLowerCase();
+    return projects.filter((project) => {
+      const matchesStatus = filters.status === "all" || project.status === filters.status;
+      const matchesType = filters.type === "all" || project.type === filters.type;
+      const matchesSearch =
+        project.name?.toLowerCase().includes(q) ||
+        project.description?.toLowerCase().includes(q) ||
+        project.client?.company_name?.toLowerCase().includes(q) ||
+        project.client?.first_name?.toLowerCase().includes(q);
+      return matchesStatus && matchesType && matchesSearch;
+    });
+  }, [projects, filters]);
 
   const handleDeleteProject = async (id) => {
     try {
@@ -366,10 +402,24 @@ const ProjectManagement = () => {
     on_hold: projects.filter((p) => p.status === "on_hold").length,
   };
 
+  const prefetchProject = useCallback(async (id) => {
+    const key = `project_detail_${id}`;
+    if (sessionStorage.getItem(key)) return;
+    try {
+      const { data, error } = await supabase
+        .from('project')
+        .select(`id, name, des, type, status, progress, start_at, end_at, logos, technologies, total_price, live_link,
+          client:client_id (company_name, first_name, second_name, avatar_url), timeline, files, ui, extensions, tasks`)
+        .eq('id', id)
+        .single();
+      if (error) return;
+      sessionStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
+    } catch {}
+  }, []);
+
   if (loading) {
     return (
       <>
-        <Sidebar />
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -383,7 +433,6 @@ const ProjectManagement = () => {
   if (error) {
     return (
       <>
-        <Sidebar />
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 flex items-center justify-center">
           <div className="text-center text-red-600 dark:text-red-400">
             <p>{error}</p>
@@ -401,7 +450,7 @@ const ProjectManagement = () => {
 
   return (
     <>
-      <Sidebar />
+      
 
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 ml-10">
           <div className="max-w-7xl mx-auto">
@@ -553,9 +602,26 @@ const ProjectManagement = () => {
                     onEdit={(p) => console.log("Edit", p)}
                     onDelete={handleDeleteProject}
                     onView={handleViewProject}
+                    onPrefetch={prefetchProject}
                   />
                 ))}
               </AnimatePresence>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Page {page + 1} of {Math.max(1, Math.ceil(total / pageSize))}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
+                >Prev</button>
+                <button
+                  onClick={() => setPage((p) => (p + 1 < Math.ceil(total / pageSize) ? p + 1 : p))}
+                  disabled={page + 1 >= Math.ceil(total / pageSize)}
+                  className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
+                >Next</button>
+              </div>
             </div>
 
             {filteredProjects.length === 0 && !loading && (

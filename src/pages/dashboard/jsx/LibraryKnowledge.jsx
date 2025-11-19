@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import Sidebar from "./Sidebar";
 import { supabase } from "@/lib/supabase";
 
 export default function LibraryKnowledge() {
@@ -53,7 +52,6 @@ export default function LibraryKnowledge() {
 
   return (
     <>
-      <Sidebar />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 ml-10">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">

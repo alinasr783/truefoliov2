@@ -88,7 +88,14 @@ export function SessionNavBar() {
   const navigate = useNavigate();
   const pathname = location.pathname;
 
-  // جلب بيانات المستخدم من Supabase
+  // Fetch user data from Supabase
+  // Setup real-time subscription for user updates
+  // Get current user from auth
+  // Fetch user data from client table using id (not client_id)
+  // Use id instead of client_id
+  // If no data in client table, use basic auth data
+  // If error, use fallback data
+  // Show loading while fetching data
   useEffect(() => {
     fetchUserData();
 

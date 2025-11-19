@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import Sidebar from "./Sidebar";
 import { supabase } from "@/lib/supabase";
 import {
   DollarSign,
@@ -721,9 +720,8 @@ const BillingAndPayments = () => {
 
   if (loading && !transactions.length) {
     return (
-      <>
-        <Sidebar />
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 ml-10">
+    <>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 ml-10">
           <div className="max-w-7xl mx-auto">
             <div className="animate-pulse">
               <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
@@ -753,7 +751,6 @@ const BillingAndPayments = () => {
 
   return (
     <>
-      <Sidebar />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 ml-10">
         <div className="max-w-7xl mx-auto">
           {/* Header */}

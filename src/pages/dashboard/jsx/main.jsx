@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import Sidebar from "./Sidebar";
 import { supabase } from "@/lib/supabase";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -806,9 +805,8 @@ const Overview = () => {
 
   if (loading) {
     return (
-      <>
-        <Sidebar />
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 ml-10">
+    <>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 ml-10">
           <div className="max-w-7xl mx-auto">
             <div className="animate-pulse">
               <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
@@ -839,7 +837,6 @@ const Overview = () => {
   if (error && !data) {
     return (
       <>
-        <Sidebar />
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 ml-10 flex items-center justify-center">
           <div className="text-center max-w-md">
             <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -863,7 +860,7 @@ const Overview = () => {
 
   return (
     <>
-      <Sidebar />
+      
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 ml-10">
         <div className="max-w-7xl mx-auto">
           {/* Header */}

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
-import { supabase } from "@/lib/supabase";
+import { supabase, getUserSafe } from "@/lib/supabase";
 import { Blocks, Globe, Github, BarChart3, CheckCircle, X, Settings as SettingsIcon, RefreshCcw } from "lucide-react";
 
 const INTEGRATIONS = [
@@ -23,7 +22,7 @@ export default function SettingsIntegrations() {
       try {
         setLoading(true);
         setError("");
-        const { data: auth } = await supabase.auth.getUser();
+        const { data: auth } = await getUserSafe();
         const u = auth?.user || null;
         if (!cancelled) setUser(u);
 
@@ -111,7 +110,6 @@ export default function SettingsIntegrations() {
 
   return (
     <>
-      <Sidebar />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 ml-10">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
@@ -196,4 +194,3 @@ export default function SettingsIntegrations() {
     </>
   );
 }
-

@@ -1,18 +1,55 @@
 import React, { useEffect, useMemo, useState } from "react";
-import Sidebar from "./Sidebar";
-import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { supabase, getUserSafe } from "@/lib/supabase";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { Sparkles, Globe, Type, Languages, ListChecks, Link as LinkIcon, Copy, Download, Trash2, FileText, BookOpen, Send } from "lucide-react";
-
+import { Sparkles, Globe, Type, Languages, ListChecks, Link as LinkIcon, Copy, Download, Trash2, FileText, BookOpen, Send, ArrowLeft } from "lucide-react";
 // Pricing
-const PRICE_EGP = 50;
+const PRICE_EGP = 0;
 const SITE_BUCKET = "tool-sites";
 
 // Gemini API
 const GEMINI_MODEL = "gemini-2.0-flash";
 const GEMINI_API_KEY = "AIzaSyBpknrp9hVYU6zgY86QIQedSl4NmjrPCj4";
 
+const LOGO_URL = "https://i.ibb.co/cShDsKLz/upscaled-2k-image.png";
+
 const clean = (s) => String(s || "").trim();
+
+// Modern Popup component (inline, consistent with QR tool style)
+const Popup = ({ open, title = "", message = "", onClose }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-700">
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title || "Notification"}</h3>
+        </div>
+        <div className="px-5 py-4 text-gray-700 dark:text-gray-300 whitespace-pre-line">{message}</div>
+        <div className="px-5 py-4 flex justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded">OK</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ConfirmPopup = ({ open, title = "Confirm", message = "", onConfirm, onCancel }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-700">
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        </div>
+        <div className="px-5 py-4 text-gray-700 dark:text-gray-300 whitespace-pre-line">{message}</div>
+        <div className="px-5 py-4 flex justify-end gap-2">
+          <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded">Cancel</button>
+          <button onClick={onConfirm} className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded">Confirm</button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Build prompt for Gemini
 function buildPrompt({ sourceText, sourceUrl, style, englishTone, paragraphs, keywords }) {
@@ -76,7 +113,7 @@ async function callGemini(prompt) {
 
 // Translate English article to Arabic in a chosen dialect
 async function translateToArabic(text, dialect) {
-  const dialectHint = String(dialect || "فصحى").includes("مصري") ? "Egyptian Arabic" : "Modern Standard Arabic";
+  const dialectHint = String(dialect || "MSA").toLowerCase().includes("egypt") ? "Egyptian Arabic" : "Modern Standard Arabic";
   const prompt = [
     `Translate the following English article into Arabic (${dialectHint}).`,
     `Keep the structure and paragraphing. Return plain text only (no Markdown).`,
@@ -100,7 +137,7 @@ async function generateTitles(articleEn) {
   } catch {
     const lines = raw.split(/\r?\n/).map((l) => clean(l)).filter(Boolean);
     const en = lines.find((l) => /english|en/i.test(l)) || lines[0] || "Untitled";
-    const ar = lines.find((l) => /arabic|ar/i.test(l)) || lines[1] || "بدون عنوان";
+    const ar = lines.find((l) => /arabic|ar/i.test(l)) || lines[1] || "Untitled";
     return { en: clean(en.replace(/^[^:]*:\s*/, "")), ar: clean(ar.replace(/^[^:]*:\s*/, "")) };
   }
 }
@@ -154,6 +191,7 @@ function buildArticleHtml({ title, articleText, username }) {
 }
 
 export default function Tool_TextToArticle() {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState("guest");
   const [ordinal, setOrdinal] = useState(1);
@@ -166,7 +204,7 @@ export default function Tool_TextToArticle() {
   const [sourceText, setSourceText] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [style, setStyle] = useState("Formal");
-  const [dialect, setDialect] = useState("فصحى");
+  const [dialect, setDialect] = useState("MSA");
   const [englishTone, setEnglishTone] = useState("Formal");
   const [paragraphs, setParagraphs] = useState(5);
   const [keywordsInput, setKeywordsInput] = useState("");
@@ -177,12 +215,16 @@ export default function Tool_TextToArticle() {
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [purchasedThisRun, setPurchasedThisRun] = useState(false);
+  const [popup, setPopup] = useState({ open: false, title: "", message: "" });
+  const [confirmState, setConfirmState] = useState({ open: false, title: "", message: "", onConfirm: null });
+  const [wallet, setWallet] = useState(0);
+  const [canUse, setCanUse] = useState(true);
   const toolId = "text-to-article";
 
   useEffect(() => {
     const init = async () => {
       try {
-        const { data: auth } = await supabase.auth.getUser();
+        const { data: auth } = await getUserSafe();
         if (auth?.user) {
           setUser(auth.user);
           const { data: clients } = await supabase
@@ -191,9 +233,12 @@ export default function Tool_TextToArticle() {
             .eq("id", auth.user.id)
             .limit(1);
           const client = clients?.[0];
-          const rawName = client?.company_name || client?.first_name || (auth.user.email ? auth.user.email.split("@")[0] : "user");
-          const uname = String(rawName || "user").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9._-]/g, "-");
+          const emailLocal = auth.user.email ? auth.user.email.split("@")[0] : "user";
+          const uname = String(emailLocal || "user").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9._-]/g, "-");
           setUsername(uname);
+          const w = Number(client?.wallet || 0);
+          setWallet(w);
+          setCanUse(w >= PRICE_EGP);
 
           const { count } = await supabase
             .from("tool_instances")
@@ -217,12 +262,12 @@ export default function Tool_TextToArticle() {
   }, []);
 
   const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "https://truefolio.tech";
-  const friendly = (uname, ord) => `${origin}/${uname}/${toolId}/${ord}`;
+  const friendly = (uname, usageId) => `${origin}/${uname}/${toolId}/${usageId}`;
 
   const site = useMemo(() => {
-    const previewFriendlyUrl = friendly(username, ordinal);
+    const previewFriendlyUrl = finalSiteUrl || "";
     return { siteUrl: finalSiteUrl || previewFriendlyUrl };
-  }, [username, ordinal, finalSiteUrl]);
+  }, [finalSiteUrl]);
 
   const makeQrUrl = (u) => {
     try {
@@ -252,8 +297,44 @@ export default function Tool_TextToArticle() {
     }
   };
 
+  const downloadQrWithLogo = async (url, filename = "qr-with-logo.png") => {
+    try {
+      if (!url) return;
+      const qrImg = new Image();
+      qrImg.crossOrigin = "anonymous";
+      qrImg.src = url;
+      await new Promise((res, rej) => { qrImg.onload = res; qrImg.onerror = rej; });
+      const logoImg = new Image();
+      logoImg.crossOrigin = "anonymous";
+      logoImg.src = LOGO_URL;
+      await new Promise((res, rej) => { logoImg.onload = res; logoImg.onerror = rej; });
+      const size = 600;
+      const canvas = document.createElement("canvas");
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(qrImg, 0, 0, size, size);
+      const center = size / 2; const radius = size * 0.12;
+      ctx.fillStyle = "#FFFFFF";
+      ctx.beginPath(); ctx.arc(center, center, radius, 0, Math.PI * 2); ctx.fill();
+      const logoSize = radius * 1.6;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(center, center, radius * 1.05, 0, Math.PI * 2); ctx.clip();
+      ctx.drawImage(logoImg, center - logoSize / 2, center - logoSize / 2, logoSize, logoSize);
+      ctx.restore();
+      const href = canvas.toDataURL("image/png");
+      const a = document.createElement("a"); a.href = href; a.download = filename; a.click();
+    } catch (err) {
+      console.warn("[TextToArticle] QR canvas download failed, fallback:", err);
+      window.open(url, "_blank");
+    }
+  };
+
   const generateArticle = async () => {
     try {
+      if (!canUse) {
+        setPopup({ open: true, title: "Insufficient Balance", message: `Your current balance is ${wallet} EGP, and the service price is ${PRICE_EGP} EGP. Please recharge to continue.` });
+        return;
+      }
       setGenerating(true);
       const prompt = buildPrompt({
         sourceText,
@@ -274,7 +355,7 @@ export default function Tool_TextToArticle() {
       try {
         const t = await generateTitles(text);
         setTitleEn(t.en || "Untitled");
-        setTitleAr(t.ar || "بدون عنوان");
+        setTitleAr(t.ar || "Untitled");
         setTitle(t.en || "Untitled");
       } catch (e) {
         console.warn("[TextToArticle] Title generation failed:", e);
@@ -284,7 +365,7 @@ export default function Tool_TextToArticle() {
         }
       }
     } catch (e) {
-      alert("Failed to generate the article: " + (e.message || String(e)));
+      setPopup({ open: true, title: "Generation Failed", message: e.message || String(e) });
       console.error("[TextToArticle] generate error:", e);
     } finally {
       setGenerating(false);
@@ -330,8 +411,9 @@ export default function Tool_TextToArticle() {
   };
 
   const saveArticleInstance = async () => {
-    if (!user) return alert("Please login.");
-    if (!articleText) return alert("Generate the article first.");
+    if (!user) return setPopup({ open: true, title: "Login Required", message: "Please sign in first." });
+    if (!articleText) return setPopup({ open: true, title: "Article Not Ready", message: "Please generate the article first." });
+    if (!canUse) return setPopup({ open: true, title: "Insufficient Balance", message: `Your current balance is ${wallet} EGP, and the service price is ${PRICE_EGP} EGP.` });
     try {
       setSaving(true);
       await ensureToolExists();
@@ -343,33 +425,67 @@ export default function Tool_TextToArticle() {
         .range(0, 0);
       if (typeof count === "number") setOrdinal((count || 0) + 1);
 
-      const ordForPath = Number.isFinite(ordinal) && ordinal > 0 ? ordinal : Math.floor(Date.now());
-      const sitePath = `${username}/${toolId}/${ordForPath}/index.html`;
-      const html = buildArticleHtml({ title, articleText, username });
-      const htmlBlob = new Blob([html], { type: "text/html; charset=utf-8" });
-      const sitePublicUrl = await uploadToStorage(SITE_BUCKET, sitePath, htmlBlob, "text/html; charset=utf-8");
-      const friendlyUrl = friendly(username, ordForPath);
+      // refresh wallet before purchase
+      const { data: clientsLatest } = await supabase
+        .from("client")
+        .select("wallet")
+        .eq("id", user.id)
+        .limit(1);
+      const latestWallet = Number(clientsLatest?.[0]?.wallet || wallet);
+      if (latestWallet < PRICE_EGP) {
+        setWallet(latestWallet);
+        setCanUse(false);
+        setSaving(false);
+        return setPopup({ open: true, title: "Insufficient Balance", message: `Your current balance is ${latestWallet} EGP, and the service price is ${PRICE_EGP} EGP.` });
+      }
 
+      // Defer HTML upload until usageId is assigned by the server (post-purchase)
+
+      // Purchase instance (DB will assign a unique usage_id)
       const { data: purchase, error: purchaseErr } = await supabase.rpc("purchase_tool_instance", {
         p_client_id: user.id,
         p_tool_id: toolId,
         p_price: PRICE_EGP,
-        p_site_url: friendlyUrl,
+        p_site_url: "", // Will be updated after obtaining usage_id
         p_source_image_url: "",
         p_title: title,
       });
       if (purchaseErr) throw purchaseErr;
 
+      // Fetch latest instance to get usage_id
+      const { data: lastInst } = await supabase
+        .from("tool_instances")
+        .select("id, usage_id")
+        .eq("client_id", user.id)
+        .eq("tool_id", toolId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const usageId = lastInst?.[0]?.usage_id;
+      if (!usageId) throw new Error("usage_id was not found for the created record.");
+      const friendlyUrl = friendly(username, usageId);
+
+      // Upload HTML to storage under usageId path
+      const sitePath = `${username}/${toolId}/${usageId}/index.html`;
+      const html = buildArticleHtml({ title, articleText, username });
+      const htmlBlob = new Blob([html], { type: "text/html; charset=utf-8" });
+      await uploadToStorage(SITE_BUCKET, sitePath, htmlBlob, "text/html; charset=utf-8");
+
+      // Update DB with friendly URL structure
+      await supabase
+        .from("tool_instances")
+        .update({ site_url: friendlyUrl })
+        .eq("id", lastInst?.[0]?.id);
+
       setFinalSiteUrl(friendlyUrl);
       setPurchasedThisRun(true);
-      alert("Article saved and service purchased.");
+      setPopup({ open: true, title: "Saved", message: "The article has been saved and the service cost was deducted successfully." });
       await loadHistory();
     } catch (e) {
       const msg = e?.message || String(e);
       if (/insufficient/i.test(msg)) {
-        alert("Insufficient wallet balance for this service.");
+        setPopup({ open: true, title: "Insufficient Balance", message: `Insufficient funds to complete the operation. Balance: ${wallet} EGP, Price: ${PRICE_EGP} EGP.` });
       } else {
-        alert(`Save failed: ${msg}`);
+        setPopup({ open: true, title: "Save Failed", message: msg });
       }
       console.error("[TextToArticle] save error:", e);
     } finally {
@@ -382,10 +498,10 @@ export default function Tool_TextToArticle() {
   }, [projects, selectedProjectId]);
 
   const saveToProject = async () => {
-    if (!user) return alert("Please login.");
-    if (!selectedProject) return alert("Select a project first.");
-    if (!articleText) return alert("Generate the article first.");
-    if (!articleTextAr) return alert("Generate the Arabic version first.");
+    if (!user) return setPopup({ open: true, title: "Login Required", message: "Please sign in first." });
+    if (!selectedProject) return setPopup({ open: true, title: "Select a Project", message: "Please select the project you want to send to." });
+    if (!articleText && !articleTextAr) return setPopup({ open: true, title: "No Content", message: "Please generate content first (English or Arabic)." });
+    if (!canUse) return setPopup({ open: true, title: "Insufficient Balance", message: `Your current balance is ${wallet} EGP, and the service price is ${PRICE_EGP} EGP.` });
     try {
       setSaving(true);
       await ensureToolExists();
@@ -397,13 +513,11 @@ export default function Tool_TextToArticle() {
           .eq("tool_id", toolId)
           .range(0, 0);
         if (typeof count === "number") setOrdinal((count || 0) + 1);
-        const ordForPath = Number.isFinite(ordinal) && ordinal > 0 ? ordinal : Math.floor(Date.now());
-        const friendlyUrl = friendly(username, ordForPath);
         const { error: purchaseErr } = await supabase.rpc("purchase_tool_instance", {
           p_client_id: user.id,
           p_tool_id: toolId,
           p_price: PRICE_EGP,
-          p_site_url: friendlyUrl,
+          p_site_url: "",
           p_source_image_url: "",
           p_title: title,
         });
@@ -413,18 +527,68 @@ export default function Tool_TextToArticle() {
 
       const blogTable = clean(selectedProject.blog_tabel_name) || "articles";
       const remote = createSupabaseClient(clean(selectedProject.supabase_url), clean(selectedProject.supabase_anon));
-      const { error } = await remote.from(blogTable).insert({
+
+      // Try combined insert first, then fall back based on errors to handle single-language tables
+      const payloadCombined = {
         title_en: clean(titleEn || title),
         title_ar: clean(titleAr),
         content_en: clean(articleText),
         content_ar: clean(articleTextAr),
         image_url: null,
         show_on_homepage: true,
-      });
-      if (error) throw error;
-      alert("Article sent to the selected project database.");
+      };
+      let insertErr = null;
+      let inserted = false;
+
+      // Attempt combined if we have at least one language content
+      if (articleText || articleTextAr) {
+        const { error } = await remote.from(blogTable).insert(payloadCombined);
+        if (!error) {
+          inserted = true;
+        } else {
+          insertErr = error;
+        }
+      }
+
+      // If combined failed or we only want single language, try English-only then Arabic-only
+      if (!inserted) {
+        if (articleText) {
+          const payloadEn = {
+            title_en: clean(titleEn || title),
+            content_en: clean(articleText),
+            image_url: null,
+            show_on_homepage: true,
+          };
+          const { error: enErr } = await remote.from(blogTable).insert(payloadEn);
+          if (!enErr) {
+            inserted = true;
+          } else {
+            insertErr = enErr;
+          }
+        }
+        if (!inserted && articleTextAr) {
+          const payloadAr = {
+            title_ar: clean(titleAr || ""),
+            content_ar: clean(articleTextAr),
+            image_url: null,
+            show_on_homepage: true,
+          };
+          const { error: arErr } = await remote.from(blogTable).insert(payloadAr);
+          if (!arErr) {
+            inserted = true;
+          } else {
+            insertErr = arErr;
+          }
+        }
+      }
+
+      if (!inserted) {
+        throw insertErr || new Error("Insert into project table failed.");
+      }
+
+      setPopup({ open: true, title: "Sent", message: "The article has been sent to the selected project's database." });
     } catch (e) {
-      alert("Failed to save to project: " + (e.message || String(e)));
+      setPopup({ open: true, title: "Send Failed", message: e.message || String(e) });
       console.error("[TextToArticle] saveToProject error:", e);
     } finally {
       setSaving(false);
@@ -433,11 +597,11 @@ export default function Tool_TextToArticle() {
 
   const toFriendlyFromStorageUrl = (u) => {
     try {
-      const m = String(u || "").match(/tool-sites\/(.*?)\/text-to-article\/(\d+)\/index\.html/);
+      const m = String(u || "").match(/tool-sites\/(.*?)\/text-to-article\/([^/]+)\/index\.html/);
       if (!m) return u;
       const uname = m[1];
-      const ord = m[2];
-      return friendly(uname, ord);
+      const usageId = m[2];
+      return friendly(uname, usageId);
     } catch {
       return u;
     }
@@ -464,41 +628,64 @@ export default function Tool_TextToArticle() {
   }, [user]);
 
   const copyToClipboard = async (text) => {
-    try { await navigator.clipboard.writeText(text); alert("Link copied"); } catch {}
+    try { await navigator.clipboard.writeText(text); setPopup({ open: true, title: "Copied", message: "Link copied successfully." }); } catch {}
   };
 
   const deleteInstance = async (id) => {
-    if (!confirm("Do you want to delete this record?")) return;
-    const { error } = await supabase.from("tool_instances").delete().eq("id", id).eq("client_id", user.id);
-    if (error) {
-      alert("Failed to delete: " + (error.message || ""));
-      return;
-    }
-    await loadHistory();
+    setConfirmState({
+      open: true,
+      title: "Delete Confirmation",
+      message: "Do you want to delete this record?",
+      onConfirm: async () => {
+        setConfirmState((s) => ({ ...s, open: false }));
+        const { error } = await supabase.from("tool_instances").delete().eq("id", id).eq("client_id", user.id);
+        if (error) {
+          setPopup({ open: true, title: "Delete Failed", message: error.message || "" });
+          return;
+        }
+        await loadHistory();
+        setPopup({ open: true, title: "Deleted", message: "The record has been deleted successfully." });
+      },
+    });
   };
 
   const qrUrl = useMemo(() => {
     try {
       const target = encodeURIComponent(site.siteUrl || "");
       if (!target) return "";
-      return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${target}`;
+      return `https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=${target}`;
     } catch {
       return "";
     }
   }, [site.siteUrl]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* Wallet gate overlay (only when paid) */}
+      {PRICE_EGP > 0 && !canUse && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+          <div className="max-w-md w-full bg-white border border-gray-200 rounded-xl shadow-xl p-6 text-center">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Insufficient Balance</h3>
+            <p className="text-gray-700">Your current balance is {wallet} EGP, and the service price is {PRICE_EGP} EGP. Please recharge to continue.</p>
+          </div>
+        </div>
+      )}
+      
       <div className="max-w-7xl mx-auto px-4 py-8 ml-10">
         {/* Header */}
-        <div className="text-center space-y-2 mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Text to Article</h1>
-          <p className="text-gray-600 text-lg">Transform text or URLs into professional articles with AI</p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
-            <span className="text-sm font-medium text-gray-700">Price:</span>
-            <span className="text-lg font-bold text-gray-900">{PRICE_EGP} EGP</span>
+        <div className="mb-8 flex items-start justify-between">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold text-gray-900 -mt-1">Text to Article</h1>
+            <p className="text-gray-600 text-lg">Transform text or URLs into professional articles with AI</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
+              <span className="text-sm font-medium text-gray-700">Price:</span>
+              <span className="text-lg font-bold text-gray-900">{PRICE_EGP === 0 ? "Free" : `${PRICE_EGP} EGP`}</span>
+            </div>
           </div>
+          <button onClick={() => navigate('/dashboard/tools')} className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-900 hover:bg-gray-100">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Tools
+          </button>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -528,6 +715,7 @@ export default function Tool_TextToArticle() {
                     value={titleEn}
                     onChange={(e) => { setTitleEn(e.target.value); setTitle(e.target.value); }}
                     placeholder="Article title in English"
+                    disabled={!canUse}
                   />
                 </div>
                 <div>
@@ -539,7 +727,8 @@ export default function Tool_TextToArticle() {
                     className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={titleAr}
                     onChange={(e) => setTitleAr(e.target.value)}
-                    placeholder="عنوان المقال بالعربية"
+                    placeholder="Article title (Arabic)"
+                    disabled={!canUse}
                   />
                 </div>
               </div>
@@ -555,6 +744,7 @@ export default function Tool_TextToArticle() {
                     className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={style}
                     onChange={(e) => setStyle(e.target.value)}
+                    disabled={!canUse}
                   >
                     <option>Formal</option>
                     <option>Creative</option>
@@ -575,6 +765,7 @@ export default function Tool_TextToArticle() {
                     className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={paragraphs}
                     onChange={(e) => setParagraphs(Math.max(1, Math.min(10, Number(e.target.value) || 5)))}
+                    disabled={!canUse}
                   />
                 </div>
               </div>
@@ -590,6 +781,7 @@ export default function Tool_TextToArticle() {
                     className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={englishTone}
                     onChange={(e) => setEnglishTone(e.target.value)}
+                    disabled={!canUse}
                   >
                     <option value="Formal">Formal English</option>
                     <option value="American (Colloquial)">American English (colloquial)</option>
@@ -598,15 +790,16 @@ export default function Tool_TextToArticle() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                     <Languages className="w-4 h-4" />
-                    اللهجة العربية
+                    <label className="block text-gray-700 mb-1">Arabic Dialect</label>
                   </label>
                   <select
                     className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                     value={dialect}
                     onChange={(e) => setDialect(e.target.value)}
+                    disabled={!canUse}
                   >
-                    <option value="فصحى">الفصحى (Modern Standard Arabic)</option>
-                    <option value="عامية مصرية">العامية المصرية (Egyptian Arabic)</option>
+                    <option value="MSA">Modern Standard Arabic</option>
+                    <option value="Egyptian">Egyptian Arabic</option>
                   </select>
                 </div>
               </div>
@@ -625,6 +818,7 @@ export default function Tool_TextToArticle() {
                         ? "bg-gray-800 text-white" 
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
+                    disabled={!canUse}
                   >
                     Text
                   </button>
@@ -635,6 +829,7 @@ export default function Tool_TextToArticle() {
                         ? "bg-gray-800 text-white" 
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
+                    disabled={!canUse}
                   >
                     URL
                   </button>
@@ -645,6 +840,7 @@ export default function Tool_TextToArticle() {
                     value={sourceText}
                     onChange={(e) => setSourceText(e.target.value)}
                     placeholder="Paste your source text here..."
+                    disabled={!canUse}
                   />
                 ) : (
                   <input
@@ -652,6 +848,7 @@ export default function Tool_TextToArticle() {
                     value={sourceUrl}
                     onChange={(e) => setSourceUrl(e.target.value)}
                     placeholder="Enter a URL to extract content from..."
+                    disabled={!canUse}
                   />
                 )}
               </div>
@@ -666,6 +863,7 @@ export default function Tool_TextToArticle() {
                   value={keywordsInput}
                   onChange={(e) => setKeywordsInput(e.target.value)}
                   placeholder="Example: digital marketing, SEO, content strategy"
+                  disabled={!canUse}
                 />
               </div>
 
@@ -673,7 +871,7 @@ export default function Tool_TextToArticle() {
               <div className="flex gap-3">
                 <button
                   onClick={generateArticle}
-                  disabled={generating}
+                  disabled={generating || !canUse}
                   className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-xl disabled:opacity-50 transition-colors"
                 >
                   {generating ? (
@@ -690,7 +888,7 @@ export default function Tool_TextToArticle() {
                 </button>
                 <button
                   onClick={saveArticleInstance}
-                  disabled={saving || !articleText}
+                  disabled={saving || !articleText || !canUse}
                   className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl disabled:opacity-50 transition-colors"
                 >
                   <FileText className="w-4 h-4" />
@@ -761,6 +959,7 @@ export default function Tool_TextToArticle() {
                 className="w-full rounded-xl border border-gray-300 bg-white text-gray-900 p-3 shadow-sm focus:ring-2 focus:ring-gray-500 focus:border-transparent mb-4"
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
+                disabled={!canUse}
               >
                 <option value="">Select a project...</option>
                 {projects.map((p) => (
@@ -777,14 +976,14 @@ export default function Tool_TextToArticle() {
 
               <button
                 onClick={saveToProject}
-                disabled={saving || !articleText || !selectedProjectId}
+                disabled={saving || !articleText || !selectedProjectId || !canUse}
                 className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-xl disabled:opacity-50 transition-colors"
               >
                 <Send className="w-4 h-4" />
                 Save to Project
               </button>
 
-              {!purchasedThisRun && (
+              {PRICE_EGP > 0 && !purchasedThisRun && (
                 <p className="text-xs text-gray-600 mt-2 text-center">
                   Payment required for project integration
                 </p>
@@ -819,6 +1018,7 @@ export default function Tool_TextToArticle() {
                     <button 
                       onClick={() => copyToClipboard(site.siteUrl)}
                       className="p-1 text-gray-500 hover:text-gray-700"
+                      disabled={!canUse}
                     >
                       <Copy className="w-4 h-4" />
                     </button>
@@ -827,18 +1027,25 @@ export default function Tool_TextToArticle() {
 
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2">QR Code</p>
-                  <div className="bg-white p-4 rounded-lg border border-gray-200 inline-block">
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 inline-block relative">
                     {qrUrl ? (
-                      <img src={qrUrl} alt="QR Code" className="w-40 h-40" />
+                      <div className="relative w-60 h-60">
+                        <img src={qrUrl} alt="QR Code" className="w-60 h-60 rounded" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-md">
+                            <img src={LOGO_URL} alt="Logo" className="w-12 h-12 object-contain" />
+                          </div>
+                        </div>
+                      </div>
                     ) : (
-                      <div className="w-40 h-40 bg-gray-100 rounded flex items-center justify-center">
+                      <div className="w-60 h-60 bg-gray-100 rounded flex items-center justify-center">
                         <LinkIcon className="w-8 h-8 text-gray-400" />
                       </div>
                     )}
                   </div>
                   <button 
-                    onClick={() => window.open(qrUrl, "_blank")} 
-                    disabled={!qrUrl}
+                    onClick={() => downloadQrWithLogo(qrUrl, `qr-${username}.png`)} 
+                    disabled={!qrUrl || !canUse}
                     className="w-full mt-3 inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl disabled:opacity-50"
                   >
                     <Download className="w-4 h-4" />
@@ -901,6 +1108,7 @@ export default function Tool_TextToArticle() {
                           onClick={() => copyToClipboard(row.site_url)}
                           className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                           title="Copy URL"
+                          disabled={!canUse}
                         >
                           <Copy className="h-4 w-4" />
                         </button>
@@ -915,6 +1123,7 @@ export default function Tool_TextToArticle() {
                           onClick={() => deleteInstance(row.id)}
                           className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete"
+                          disabled={!canUse}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -933,6 +1142,14 @@ export default function Tool_TextToArticle() {
           </div>
         </div>
       </div>
+      <Popup open={popup.open} title={popup.title} message={popup.message} onClose={() => setPopup({ open: false, title: "", message: "" })} />
+      <ConfirmPopup 
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        onCancel={() => setConfirmState((s) => ({ ...s, open: false }))}
+        onConfirm={confirmState.onConfirm || (() => setConfirmState((s) => ({ ...s, open: false })))}
+      />
     </div>
   );
 }

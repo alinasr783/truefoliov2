@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
 import { supabase } from "@/lib/supabase";
 
 export default function Review() {
@@ -102,7 +101,6 @@ export default function Review() {
 
   return (
     <>
-      <Sidebar />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 ml-10">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
@@ -136,7 +134,7 @@ export default function Review() {
             ) : (
               <div>
                 {articles.length === 0 ? (
-                  <p className="text-gray-600 dark:text-gray-400">لا توجد تقارير حالياً.</p>
+                  <p className="text-gray-600 dark:text-gray-400">There are no reports currently.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {articles.map((a) => (

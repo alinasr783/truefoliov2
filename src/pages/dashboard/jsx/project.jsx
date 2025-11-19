@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import Sidebar from "./Sidebar";
 import { supabase } from "@/lib/supabase";
 import {
   ArrowLeft,
@@ -371,7 +370,6 @@ const ProjectDetails = () => {
   if (loading) {
     return (
       <>
-        <Sidebar />
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 flex items-center justify-center ml-10">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -387,7 +385,6 @@ const ProjectDetails = () => {
   if (error || !project) {
     return (
       <>
-        <Sidebar />
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 flex items-center justify-center ml-10">
           <div className="text-center max-w-md">
             <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -444,7 +441,6 @@ const ProjectDetails = () => {
 
   return (
     <>
-      <Sidebar />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 ml-10">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
